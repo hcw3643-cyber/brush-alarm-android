@@ -94,10 +94,15 @@ class MainActivity : ComponentActivity() {
         )
         val activeAlarmId = AlarmService.activeAlarmId(this)
         if (activeAlarmId >= 0) {
-            startActivity(
-                Intent(this, VerificationActivity::class.java)
-                    .putExtra(AlarmReceiver.EXTRA_ID, activeAlarmId)
+            AlarmDiagnosticLog.record(
+                this,
+                event = "main_forwarding_to_verification",
+                alarmId = activeAlarmId
             )
+            startActivity(VerificationActivity.intent(this, activeAlarmId))
+            // The verification screen becomes the task entry while ringing.
+            // Finishing Main prevents onResume/startActivity ping-pong.
+            finish()
             return
         }
         exactAlarmAllowed = Build.VERSION.SDK_INT < 31 ||

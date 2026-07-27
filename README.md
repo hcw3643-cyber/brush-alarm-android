@@ -10,6 +10,7 @@
 - 舍友模式：可暂时静音，60 秒后自动再次响铃
 - Android `AlarmManager` 精确闹钟、锁屏全屏响铃通知、Direct Boot 解锁前恢复
 - 针对厂商熄屏延迟，同时登记 RTC 闹钟和 elapsed-realtime 唤醒看门狗并去重
+- Android 15+ 显式授权全屏 PendingIntent 的后台 Activity 启动，锁屏直接进入验证
 - Receiver 触发时先登记下一次，设备重启/升级/改时区后自动恢复
 - 前置摄像头端侧 ONNX 视频模型验证；帧不保存、不上传
 - 测试版数值推理日志，可导出用于真机阈值标定

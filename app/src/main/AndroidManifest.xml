@@ -29,7 +29,7 @@
             android:name=".ui.VerificationActivity"
             android:directBootAware="true"
             android:exported="false"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:showWhenLocked="true"
             android:turnScreenOn="true" />

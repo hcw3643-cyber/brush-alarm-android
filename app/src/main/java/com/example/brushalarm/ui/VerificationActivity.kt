@@ -1,8 +1,11 @@
 package com.example.brushalarm.ui
 
 import android.Manifest
+import android.app.ActivityOptions
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.UserManager
 import android.util.Size
@@ -33,6 +36,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.brushalarm.BrushAlarmApp
 import com.example.brushalarm.BuildConfig
 import com.example.brushalarm.alarm.AlarmReceiver
+import com.example.brushalarm.alarm.AlarmDiagnosticLog
 import com.example.brushalarm.alarm.AlarmService
 import com.example.brushalarm.alarm.DirectBootAlarmStore
 import com.example.brushalarm.data.AlarmMode
@@ -64,6 +68,12 @@ class VerificationActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AlarmDiagnosticLog.record(
+            this,
+            event = "verification_activity_created",
+            alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
+            details = "action=${intent.action}"
+        )
         cameraExecutor = Executors.newSingleThreadExecutor()
         hasCamera = ContextCompat.checkSelfPermission(
             this, Manifest.permission.CAMERA
@@ -87,6 +97,17 @@ class VerificationActivity : ComponentActivity() {
                 VerificationScreen()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        AlarmDiagnosticLog.record(
+            this,
+            event = "verification_activity_new_intent",
+            alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
+            details = "action=${intent.action}"
+        )
     }
 
     @Composable
@@ -233,10 +254,45 @@ class VerificationActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        AlarmDiagnosticLog.record(
+            this,
+            event = "verification_activity_destroyed",
+            alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
+            details = "finishing=$isFinishing changing_config=$isChangingConfigurations"
+        )
         cameraProvider?.unbindAll()
         analyzer?.close()
         analyzer = null
         cameraExecutor.shutdown()
         super.onDestroy()
+    }
+
+    companion object {
+        private const val ACTION_VERIFY = "brushalarm.VERIFY"
+
+        fun intent(context: Context, alarmId: Long): Intent =
+            Intent(context, VerificationActivity::class.java)
+                .setAction(ACTION_VERIFY)
+                .addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+                .putExtra(AlarmReceiver.EXTRA_ID, alarmId)
+
+        /**
+         * targetSdk 35+ no longer delegates background-activity-launch rights
+         * from a PendingIntent creator unless it explicitly opts in.
+         */
+        fun pendingIntentOptions(): Bundle? =
+            if (Build.VERSION.SDK_INT >= 35) {
+                ActivityOptions.makeBasic()
+                    .setPendingIntentCreatorBackgroundActivityStartMode(
+                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                    )
+                    .toBundle()
+            } else {
+                null
+            }
     }
 }

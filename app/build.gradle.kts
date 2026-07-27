@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.brushalarm"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.2.3-test"
+        versionCode = 6
+        versionName = "0.2.4-test"
     }
 
     buildFeatures {

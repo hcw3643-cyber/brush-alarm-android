@@ -7,6 +7,7 @@ import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.IBinder
+import android.os.Build
 import android.os.PowerManager
 import android.os.UserManager
 import android.provider.Settings
@@ -70,6 +71,16 @@ class AlarmService : Service() {
         // A cold process must enter the foreground immediately. Room is opened
         // afterwards; waiting for it here can exceed Android's deadline.
         startForeground(NOTIFICATION_ID, notification("起床刷牙"))
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        AlarmDiagnosticLog.record(
+            this,
+            event = "foreground_notification_started",
+            alarmId = id,
+            details = "channel_importance=" +
+                "${notificationManager.getNotificationChannel(CHANNEL_ID)?.importance} " +
+                "full_screen=${Build.VERSION.SDK_INT < 34 || notificationManager.canUseFullScreenIntent()} " +
+                "creator_bal_opt_in=${Build.VERSION.SDK_INT >= 35}"
+        )
         start(id)
     }
 
@@ -151,11 +162,11 @@ class AlarmService : Service() {
 
     private fun notification(label: String): Notification {
         val verify = PendingIntent.getActivity(
-            this, 1,
-            Intent(this, VerificationActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra(AlarmReceiver.EXTRA_ID, alarmId),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            this,
+            1,
+            VerificationActivity.intent(this, alarmId),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            VerificationActivity.pendingIntentOptions()
         )
         val quietIntent = PendingIntent.getService(
             this, 2, Intent(this, AlarmService::class.java).setAction(ACTION_QUIET),
@@ -167,6 +178,8 @@ class AlarmService : Service() {
             .setContentText("完成刷牙验证后闹钟才会停止")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setFullScreenIntent(verify, true)
