@@ -37,10 +37,10 @@ class BrushDecisionFilterTest {
     }
 
     @Test
-    fun sustainedBrushingPassesAfterThreeSecondsOfElapsedEvidence() {
+    fun sustainedBrushingPassesAfterSixSecondsOfElapsedEvidence() {
         val filter = BrushDecisionFilter()
         var timestamp = 0L
-        while (timestamp < 3_000L) {
+        while (timestamp < 6_000L) {
             assertFalse(filter.update(.9f, timestamp).passed)
             timestamp += 500L
         }

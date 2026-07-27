@@ -52,8 +52,10 @@ internal class BrushDecisionFilter {
     companion object {
         const val HIGH_THRESHOLD = .70f
         const val LOW_THRESHOLD = .10f
-        const val REQUIRED_BRUSHING_MS = 3_000f
-        const val LOW_EVIDENCE_DECAY_RATE = .50f
+        const val REQUIRED_BRUSHING_MS = 6_000f
+        // REQUIRED_BRUSHING_MS doubled to slow positive progress. A 1.0 decay
+        // preserves the previous percentage drop for contradicted windows.
+        const val LOW_EVIDENCE_DECAY_RATE = 1.0f
         private const val MAX_UPDATE_GAP_MS = 750L
     }
 }

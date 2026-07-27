@@ -37,7 +37,7 @@ internal class InferenceLogWriter(context: Context) : AutoCloseable {
             "schema_version,model_id,app_version,device,android_sdk," +
                 "elapsed_ms,event,ground_truth,window_span_ms,sample_fps," +
                 "inference_ms,logit,confidence,decision,progress," +
-                "high_threshold,low_threshold"
+                "high_threshold,low_threshold,required_brushing_ms"
         )
         writer.flush()
     }
@@ -61,11 +61,12 @@ internal class InferenceLogWriter(context: Context) : AutoCloseable {
         writer.appendLine(
             "$metadataPrefix," + String.format(
                 Locale.US,
-                "%d,inference,%s,%.3f,%.3f,%.3f,%.6f,%.6f,%s,%.6f,%.3f,%.3f",
+                "%d,inference,%s,%.3f,%.3f,%.3f,%.6f,%.6f,%s,%.6f,%.3f,%.3f,%.0f",
                 elapsedMs(), groundTruth, windowSpanMs, sampleFps, inferenceMs,
                 logit, confidence, decision, progress,
                 BrushDecisionFilter.HIGH_THRESHOLD,
-                BrushDecisionFilter.LOW_THRESHOLD
+                BrushDecisionFilter.LOW_THRESHOLD,
+                BrushDecisionFilter.REQUIRED_BRUSHING_MS
             )
         )
         writer.flush()
@@ -76,7 +77,8 @@ internal class InferenceLogWriter(context: Context) : AutoCloseable {
         writer.appendLine(
             "$metadataPrefix,${elapsedMs()},$event,$groundTruth,,,,,,,," +
                 "${BrushDecisionFilter.HIGH_THRESHOLD}," +
-                BrushDecisionFilter.LOW_THRESHOLD
+                "${BrushDecisionFilter.LOW_THRESHOLD}," +
+                BrushDecisionFilter.REQUIRED_BRUSHING_MS
         )
         writer.flush()
     }
@@ -89,7 +91,7 @@ internal class InferenceLogWriter(context: Context) : AutoCloseable {
     }
 
     private companion object {
-        const val SCHEMA_VERSION = "1"
+        const val SCHEMA_VERSION = "2"
         const val MODEL_ID = "s3d-brush-2s-192-feedback-v1"
 
         fun csvCell(value: String): String =
