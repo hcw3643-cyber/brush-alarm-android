@@ -2,10 +2,12 @@ package com.example.brushalarm
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -56,6 +58,9 @@ class MainActivity : ComponentActivity() {
     private var showTimeEditor by mutableStateOf(false)
     private var editingAlarm by mutableStateOf<AlarmEntity?>(null)
     private var exactAlarmAllowed by mutableStateOf(true)
+    private var batteryUnrestricted by mutableStateOf(true)
+    private var fullScreenAlarmAllowed by mutableStateOf(true)
+    private val isVivo = Build.MANUFACTURER.equals("vivo", ignoreCase = true)
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) {}
@@ -75,6 +80,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        batteryUnrestricted = Build.VERSION.SDK_INT < 23 ||
+            getSystemService(PowerManager::class.java)
+                .isIgnoringBatteryOptimizations(packageName)
+        fullScreenAlarmAllowed = Build.VERSION.SDK_INT < 34 ||
+            getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+        AlarmDiagnosticLog.record(
+            this,
+            event = "app_resumed",
+            details = "manufacturer=${Build.MANUFACTURER} " +
+                "battery_unrestricted=$batteryUnrestricted " +
+                "full_screen=$fullScreenAlarmAllowed"
+        )
         val activeAlarmId = AlarmService.activeAlarmId(this)
         if (activeAlarmId >= 0) {
             startActivity(
@@ -143,6 +160,9 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+                if (isVivo || !batteryUnrestricted || !fullScreenAlarmAllowed) {
+                    AlarmReliabilityCard()
+                }
                 TextButton(
                     onClick = {
                         if (!InferenceLogFiles.shareLatest(this@MainActivity)) {
@@ -180,6 +200,61 @@ class MainActivity : ComponentActivity() {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(alarms, key = { it.id }) { alarm -> AlarmCard(alarm) }
                     item { Spacer(Modifier.height(80.dp)) }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun AlarmReliabilityCard() {
+        Card(
+            colors = CardDefaults.cardColors(Color(0xFFFFE3B3)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, bottom = 8.dp)
+        ) {
+            Column(Modifier.padding(14.dp)) {
+                Text(
+                    if (isVivo) "vivo 锁屏可靠性设置" else "锁屏可靠性设置",
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF5D4300)
+                )
+                Text(
+                    if (isVivo) {
+                        "这台手机会把划掉最近任务当成“停止应用”，并撤销系统闹钟。" +
+                            "请在系统设置中为“刷牙闹钟”开启“自启动”，再到“电池→" +
+                            "后台耗电管理”选择“允许后台高耗电”。"
+                    } else {
+                        "允许应用不受电池优化限制，并允许全屏闹钟，避免熄屏时延迟。"
+                    },
+                    modifier = Modifier.padding(top = 6.dp),
+                    color = Color(0xFF5D4300),
+                    fontSize = 13.sp
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (!batteryUnrestricted) {
+                        OutlinedButton(
+                            onClick = { requestBatteryUnrestricted() },
+                            contentPadding = PaddingValues(horizontal = 10.dp)
+                        ) { Text("允许后台运行", fontSize = 12.sp) }
+                    }
+                    if (!fullScreenAlarmAllowed) {
+                        OutlinedButton(
+                            onClick = { requestFullScreenAlarm() },
+                            contentPadding = PaddingValues(horizontal = 10.dp)
+                        ) { Text("允许全屏闹钟", fontSize = 12.sp) }
+                    }
+                    if (isVivo) {
+                        OutlinedButton(
+                            onClick = { openAppSettings() },
+                            contentPadding = PaddingValues(horizontal = 10.dp)
+                        ) { Text("打开应用设置", fontSize = 12.sp) }
+                    }
                 }
             }
         }
@@ -336,6 +411,34 @@ class MainActivity : ComponentActivity() {
                 data = Uri.parse("package:$packageName")
             })
         }
+    }
+
+    private fun requestBatteryUnrestricted() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            runCatching {
+                startActivity(
+                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                )
+            }.onFailure {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            }
+        }
+    }
+
+    private fun requestFullScreenAlarm() {
+        if (Build.VERSION.SDK_INT >= 34) {
+            startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                data = Uri.parse("package:$packageName")
+            })
+        }
+    }
+
+    private fun openAppSettings() {
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:$packageName")
+        })
     }
 
     private fun formatTriggerTime(epochMillis: Long): String {

@@ -50,7 +50,7 @@ internal class BrushDecisionFilter {
     }
 
     companion object {
-        const val HIGH_THRESHOLD = .70f
+        const val HIGH_THRESHOLD = .65f
         const val LOW_THRESHOLD = .10f
         const val REQUIRED_BRUSHING_MS = 6_000f
         // REQUIRED_BRUSHING_MS doubled to slow positive progress. A 1.0 decay
