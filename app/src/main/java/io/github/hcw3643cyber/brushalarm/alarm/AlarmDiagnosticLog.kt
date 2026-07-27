@@ -1,10 +1,10 @@
-package com.example.brushalarm.alarm
+package io.github.hcw3643cyber.brushalarm.alarm
 
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
-import com.example.brushalarm.BuildConfig
+import io.github.hcw3643cyber.brushalarm.BuildConfig
 import java.io.File
 import java.io.FileWriter
 import java.time.Instant

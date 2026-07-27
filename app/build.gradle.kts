@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.brushalarm"
+    namespace = "io.github.hcw3643cyber.brushalarm"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.brushalarm"
+        applicationId = "io.github.hcw3643cyber.brushalarm"
         minSdk = 26
         targetSdk = 35
         versionCode = 7

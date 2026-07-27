@@ -1,4 +1,4 @@
-package com.example.brushalarm.alarm
+package io.github.hcw3643cyber.brushalarm.alarm
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -6,8 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
-import com.example.brushalarm.MainActivity
-import com.example.brushalarm.data.AlarmEntity
+import io.github.hcw3643cyber.brushalarm.MainActivity
+import io.github.hcw3643cyber.brushalarm.data.AlarmEntity
 import java.time.ZonedDateTime
 
 object AlarmScheduler {

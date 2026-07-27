@@ -1,4 +1,4 @@
-package com.example.brushalarm
+package io.github.hcw3643cyber.brushalarm
 
 import android.Manifest
 import android.app.AlarmManager
@@ -40,14 +40,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.example.brushalarm.alarm.AlarmScheduler
-import com.example.brushalarm.alarm.AlarmReceiver
-import com.example.brushalarm.alarm.AlarmService
-import com.example.brushalarm.alarm.AlarmDiagnosticLog
-import com.example.brushalarm.data.AlarmEntity
-import com.example.brushalarm.data.AlarmMode
-import com.example.brushalarm.ui.VerificationActivity
-import com.example.brushalarm.verification.InferenceLogFiles
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmScheduler
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmReceiver
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmService
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmDiagnosticLog
+import io.github.hcw3643cyber.brushalarm.data.AlarmEntity
+import io.github.hcw3643cyber.brushalarm.data.AlarmMode
+import io.github.hcw3643cyber.brushalarm.ui.VerificationActivity
+import io.github.hcw3643cyber.brushalarm.verification.InferenceLogFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch

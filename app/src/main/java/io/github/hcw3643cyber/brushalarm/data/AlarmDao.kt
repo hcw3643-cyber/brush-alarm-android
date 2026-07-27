@@ -1,4 +1,4 @@
-package com.example.brushalarm.data
+package io.github.hcw3643cyber.brushalarm.data
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

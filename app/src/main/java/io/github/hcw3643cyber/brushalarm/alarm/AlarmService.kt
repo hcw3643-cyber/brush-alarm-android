@@ -1,4 +1,4 @@
-package com.example.brushalarm.alarm
+package io.github.hcw3643cyber.brushalarm.alarm
 
 import android.app.*
 import android.content.Context
@@ -12,10 +12,10 @@ import android.os.PowerManager
 import android.os.UserManager
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
-import com.example.brushalarm.BrushAlarmApp
-import com.example.brushalarm.R
-import com.example.brushalarm.data.AlarmMode
-import com.example.brushalarm.ui.VerificationActivity
+import io.github.hcw3643cyber.brushalarm.BrushAlarmApp
+import io.github.hcw3643cyber.brushalarm.R
+import io.github.hcw3643cyber.brushalarm.data.AlarmMode
+import io.github.hcw3643cyber.brushalarm.ui.VerificationActivity
 import kotlinx.coroutines.*
 
 class AlarmService : Service() {

@@ -1,4 +1,4 @@
-package com.example.brushalarm.data
+package io.github.hcw3643cyber.brushalarm.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

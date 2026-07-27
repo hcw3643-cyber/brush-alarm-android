@@ -1,10 +1,10 @@
-package com.example.brushalarm.alarm
+package io.github.hcw3643cyber.brushalarm.alarm
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.UserManager
-import com.example.brushalarm.BrushAlarmApp
+import io.github.hcw3643cyber.brushalarm.BrushAlarmApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

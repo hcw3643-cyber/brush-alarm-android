@@ -1,4 +1,4 @@
-package com.example.brushalarm.data
+package io.github.hcw3643cyber.brushalarm.data
 
 import android.content.Context
 import androidx.room.Database

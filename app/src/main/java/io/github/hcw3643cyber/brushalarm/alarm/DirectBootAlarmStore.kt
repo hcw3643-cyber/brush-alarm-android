@@ -1,8 +1,8 @@
-package com.example.brushalarm.alarm
+package io.github.hcw3643cyber.brushalarm.alarm
 
 import android.content.Context
-import com.example.brushalarm.data.AlarmEntity
-import com.example.brushalarm.data.AlarmMode
+import io.github.hcw3643cyber.brushalarm.data.AlarmEntity
+import io.github.hcw3643cyber.brushalarm.data.AlarmMode
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 

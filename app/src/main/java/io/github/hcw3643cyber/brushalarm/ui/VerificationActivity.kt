@@ -1,4 +1,4 @@
-package com.example.brushalarm.ui
+package io.github.hcw3643cyber.brushalarm.ui
 
 import android.Manifest
 import android.app.ActivityManager
@@ -35,14 +35,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.brushalarm.BrushAlarmApp
-import com.example.brushalarm.BuildConfig
-import com.example.brushalarm.alarm.AlarmReceiver
-import com.example.brushalarm.alarm.AlarmDiagnosticLog
-import com.example.brushalarm.alarm.AlarmService
-import com.example.brushalarm.alarm.DirectBootAlarmStore
-import com.example.brushalarm.data.AlarmMode
-import com.example.brushalarm.verification.BrushMotionAnalyzer
+import io.github.hcw3643cyber.brushalarm.BrushAlarmApp
+import io.github.hcw3643cyber.brushalarm.BuildConfig
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmReceiver
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmDiagnosticLog
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmService
+import io.github.hcw3643cyber.brushalarm.alarm.DirectBootAlarmStore
+import io.github.hcw3643cyber.brushalarm.data.AlarmMode
+import io.github.hcw3643cyber.brushalarm.verification.BrushMotionAnalyzer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

@@ -1,4 +1,4 @@
-package com.example.brushalarm.verification
+package io.github.hcw3643cyber.brushalarm.verification
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -1,4 +1,4 @@
-package com.example.brushalarm.alarm
+package io.github.hcw3643cyber.brushalarm.alarm
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

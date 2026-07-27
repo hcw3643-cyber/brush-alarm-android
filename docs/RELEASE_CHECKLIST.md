@@ -18,7 +18,8 @@
 - 用户视频、推理 CSV、闹钟诊断日志
 - `.jks`、`.keystore`、密码、Token、API Key 和代理凭据
 
-模型作为 GitHub Release 的独立资产发布；项目当前不公开 APK。
+模型作为 GitHub Release 的独立资产发布。APK 也可以作为 Release 资产公开，但只能发布
+使用长期发布密钥签名的 universal APK；不能发布 Debug、未签名或临时密钥 APK。
 
 ## 私有仓库审阅
 
@@ -28,7 +29,7 @@
 - [ ] `LICENSE`、`MODEL_LICENSE.md` 和第三方声明完整
 - [ ] README 不含私人邮箱、文件路径或本机信息
 - [ ] 模型 Release 只有 ONNX、校验值和模型说明
-- [ ] 未上传 APK、视频、数据、日志、签名库或 checkpoint
+- [ ] 未上传 Debug/未签名 APK、视频、数据、日志、签名库或 checkpoint
 - [ ] 全部测试和 Release Lint 通过
 - [ ] 在至少一台真机重新验证熄屏、划后台、重启和刷牙流程
 
@@ -46,7 +47,7 @@ git log --stat --oneline
 1. 维护者名称、仓库 URL 和测试设备信息准确；
 2. 志愿者数据征集仍处于关闭状态，或已经具备私密上传与单独同意；
 3. 模型卡没有把 UCF101、Kinetics 或第三方权重错误标注成项目自有资产；
-4. Release 中没有 APK；
+4. 如 Release 包含 APK，它是长期密钥签名的 universal APK，并附 SHA-256；
 5. Git 历史中不存在旧模型、视频、日志或密钥对象。
 
 ## 签名

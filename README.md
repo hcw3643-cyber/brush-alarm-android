@@ -7,8 +7,8 @@
 一个只有完成刷牙动作验证后才会停止的 Android 闹钟。
 
 > [!IMPORTANT]
-> 本项目是非商业、社区驱动的实验性软件，目前只在维护者的一台 vivo/OriginOS
-> 真机上完成端到端测试。它不是经过多品牌兼容性认证的医疗、健康或强制叫醒产品，
+> 本项目是非商业、社区驱动的实验性软件，目前只在 vivo X300（Android 16 /
+> OriginOS 6）上完成端到端测试。它不是经过多品牌兼容性认证的医疗、健康或强制叫醒产品，
 > 请保留系统闹钟等备用唤醒方式。
 
 ## 项目定位
@@ -52,6 +52,9 @@
 - Android SDK 35
 - Android 8.0（API 26）或更高版本真机
 
+稳定应用 ID 为 `io.github.hcw3643cyber.brushalarm`。此前使用
+`com.example.brushalarm` 的内部测试包不会被识别为同一个 App，闹钟配置也不会自动迁移。
+
 工程优先使用华为云、阿里云和腾讯云 Maven 镜像，并保留官方仓库作为回退。
 
 ### 2. 获取模型
@@ -87,7 +90,8 @@ Windows PowerShell：
 
 - `debug`：独立测试包，版本名带 `-test`，包含数值日志和人工标签。
 - `release`：正式功能包，不创建推理/闹钟诊断 CSV，也不显示导出入口。
-- Gradle 生成的 Release APK 默认未使用项目正式密钥签名；签名库绝不能提交到仓库。
+- Gradle 生成的 Release APK 默认未使用项目长期密钥签名；签名库绝不能提交到仓库。
+  面向用户的 Release 只发布长期密钥签名的 universal APK，模型作为同一版本的独立资产。
 
 ## 识别模型概要
 
@@ -140,6 +144,7 @@ Windows PowerShell：
 
 ## 许可
 
+- 维护者：Leo Huang
 - 本项目原创软件：PolyForm Noncommercial 1.0.0
 - 当前模型中项目方可许可的部分：CC BY-NC 4.0
 - 第三方组件和基础权重：保持各自原始条款
