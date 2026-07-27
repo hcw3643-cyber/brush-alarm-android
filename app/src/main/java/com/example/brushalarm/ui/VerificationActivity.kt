@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Size
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +12,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
@@ -27,6 +30,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.brushalarm.BrushAlarmApp
+import com.example.brushalarm.BuildConfig
 import com.example.brushalarm.alarm.AlarmReceiver
 import com.example.brushalarm.alarm.AlarmService
 import com.example.brushalarm.data.AlarmMode
@@ -46,6 +50,8 @@ class VerificationActivity : ComponentActivity() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var analyzer: BrushMotionAnalyzer? = null
     private var verificationFinished = false
+    private var groundTruthLabel by mutableStateOf("未标记")
+    private var groundTruth: Boolean? = null
 
     private val permission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -110,6 +116,26 @@ class VerificationActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                             ) { Text("先安静 1 分钟") }
                         }
+                        if (BuildConfig.DEBUG) {
+                            Text(
+                                "测试标签：$groundTruthLabel",
+                                color = Color.White.copy(alpha = .75f),
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { markGroundTruth(true) },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("标记开始刷牙") }
+                                OutlinedButton(
+                                    onClick = { markGroundTruth(false) },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("标记已停止") }
+                            }
+                        }
                     }
                 }
             }
@@ -136,21 +162,34 @@ class VerificationActivity : ComponentActivity() {
 
     private fun startCamera(view: PreviewView) {
         val future = ProcessCameraProvider.getInstance(this)
-        future.addListener({
+        future.addListener(cameraReady@{
+            if (isFinishing || isDestroyed) return@cameraReady
             cameraProvider = future.get()
             val preview = Preview.Builder().build().also {
                 it.surfaceProvider = view.surfaceProvider
             }
-            val analysis = ImageAnalysis.Builder()
+            val analysisBuilder = ImageAnalysis.Builder()
+                .setResolutionSelector(
+                    ResolutionSelector.Builder()
+                        .setResolutionStrategy(
+                            ResolutionStrategy(
+                                Size(640, 480),
+                                ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                            )
+                        )
+                        .build()
+                )
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build().also {
+            val analysis = analysisBuilder.build().also {
                     analyzer = BrushMotionAnalyzer(
                         context = this,
                         onProgress = { value, text ->
                             runOnUiThread { progress = value; hint = text }
                         },
                         onVerified = { runOnUiThread { verified() } }
-                    )
+                    ).also { created ->
+                        groundTruth?.let(created::markGroundTruth)
+                    }
                     it.setAnalyzer(cameraExecutor, analyzer!!)
                 }
             cameraProvider?.unbindAll()
@@ -163,6 +202,12 @@ class VerificationActivity : ComponentActivity() {
     private fun quiet() {
         startService(Intent(this, AlarmService::class.java).setAction(AlarmService.ACTION_QUIET))
         hint = "已安静 1 分钟，请继续刷牙"
+    }
+
+    private fun markGroundTruth(brushing: Boolean) {
+        groundTruth = brushing
+        analyzer?.markGroundTruth(brushing)
+        groundTruthLabel = if (brushing) "正在刷牙" else "没有刷牙"
     }
 
     private fun verified() {

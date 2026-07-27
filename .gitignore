@@ -8,6 +8,8 @@
 training/data/
 training/checkpoints/
 training/export/
+__pycache__/
+*.pyc
 .idea/
 local.properties
 build/

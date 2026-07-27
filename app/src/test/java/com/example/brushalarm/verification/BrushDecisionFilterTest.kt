@@ -3,56 +3,47 @@ package com.example.brushalarm.verification
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
-
 class BrushDecisionFilterTest {
     @Test
-    fun isolatedConfidenceSpikeDoesNotPass() {
+    fun isolatedConfidenceSpikeAddsOnlyOneInterval() {
         val filter = BrushDecisionFilter()
-        val values = listOf(0f, 0f, 1f, 0f, 0f, 0f, 0f)
+        val values = listOf(0f, 0f, 1f, 0f)
         var decision: BrushDecision? = null
-        values.forEachIndexed { index, confidence ->
-            decision = filter.update(confidence, index * 400L)
-        }
+        values.forEachIndexed { index, confidence -> decision = filter.update(confidence, index * 500L) }
         assertFalse(decision!!.brushing)
         assertFalse(decision!!.passed)
         assertTrue(decision!!.progress < .15f)
     }
 
     @Test
-    fun briefLowConfidenceDoesNotDropBrushingState() {
+    fun uncertainConfidenceHoldsProgressWithoutGrowing() {
         val filter = BrushDecisionFilter()
-        var timestamp = 0L
-        repeat(6) {
-            filter.update(.9f, timestamp)
-            timestamp += 400
-        }
-        val firstLow = filter.update(.05f, timestamp)
-        timestamp += 400
-        val secondLow = filter.update(.05f, timestamp)
-        assertTrue(firstLow.brushing)
-        assertTrue(secondLow.brushing)
-        assertFalse(firstLow.accumulating)
-        assertFalse(secondLow.accumulating)
-        assertTrue(abs(firstLow.progress - secondLow.progress) < .0001f)
+        filter.update(.9f, 0)
+        val positive = filter.update(.9f, 500)
+        val uncertain = filter.update(.4f, 1_000)
+        assertFalse(uncertain.brushing)
+        assertFalse(uncertain.accumulating)
+        assertTrue(positive.progress == uncertain.progress)
     }
 
     @Test
-    fun sustainedBrushingPassesUsingElapsedTime() {
-        val fast = completionTime(stepMs = 250)
-        val slow = completionTime(stepMs = 600)
-        assertTrue(fast in 3_000L..5_000L)
-        assertTrue(slow in 3_000L..5_500L)
-        assertTrue(abs(fast - slow) <= 750L)
+    fun lowConfidenceImmediatelyReversesEvidence() {
+        val filter = BrushDecisionFilter()
+        filter.update(.9f, 0)
+        val positive = filter.update(.9f, 500)
+        val low = filter.update(.05f, 1_000)
+        assertFalse(low.accumulating)
+        assertTrue(low.progress < positive.progress)
     }
 
-    private fun completionTime(stepMs: Long): Long {
+    @Test
+    fun sustainedBrushingPassesAfterThreeSecondsOfElapsedEvidence() {
         val filter = BrushDecisionFilter()
         var timestamp = 0L
-        while (timestamp <= 8_000L) {
-            if (filter.update(.9f, timestamp).passed) return timestamp
-            timestamp += stepMs
+        while (timestamp < 3_000L) {
+            assertFalse(filter.update(.9f, timestamp).passed)
+            timestamp += 500L
         }
-        error("Sustained brushing did not pass")
+        assertTrue(filter.update(.9f, timestamp).passed)
     }
 }

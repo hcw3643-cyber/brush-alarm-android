@@ -22,6 +22,8 @@ class AlarmService : Service() {
     private var alarmId = -1L
     private var mode = AlarmMode.CONTINUOUS
     private var repeatJob: Job? = null
+    private var alarmLoaded = false
+    private var alarmLoading = false
 
     override fun onCreate() {
         super.onCreate()
@@ -47,7 +49,12 @@ class AlarmService : Service() {
             stopSelf()
             return
         }
+        if (alarmId == id && (alarmLoading || alarmLoaded)) {
+            if (alarmLoaded) ring()
+            return
+        }
         alarmId = id
+        alarmLoading = true
         getSharedPreferences(STATE_FILE, MODE_PRIVATE)
             .edit().putLong(ACTIVE_ALARM_ID, id).apply()
         // A cold process must enter the foreground immediately. Room is opened
@@ -61,19 +68,26 @@ class AlarmService : Service() {
             val alarm = withContext(Dispatchers.IO) {
                 (application as BrushAlarmApp).database.alarms().get(id)
             } ?: run {
+                alarmLoading = false
                 clearActiveAlarm()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return@launch
             }
             mode = alarm.mode
+            alarmLoading = false
+            alarmLoaded = true
             // Refresh the placeholder with the configured label and roommate action.
             startForeground(NOTIFICATION_ID, notification(alarm.label))
             wakeLock = getSystemService(PowerManager::class.java)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BrushAlarm:ringing")
                 .apply { acquire(30 * 60_000L) }
             ring()
-            AlarmScheduler.schedule(this@AlarmService, alarm)
+            val scheduled = AlarmScheduler.schedule(this@AlarmService, alarm)
+            withContext(Dispatchers.IO) {
+                (application as BrushAlarmApp).database.alarms()
+                    .updateNextTrigger(alarm.id, scheduled.triggerAt)
+            }
         }
     }
 
@@ -131,6 +145,7 @@ class AlarmService : Service() {
             .setContentText("完成刷牙验证后闹钟才会停止")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setFullScreenIntent(verify, true)
             .addAction(0, "开始验证", verify)
@@ -165,5 +180,14 @@ class AlarmService : Service() {
         private const val NOTIFICATION_ID = 4201
         private const val STATE_FILE = "active_alarm_state"
         private const val ACTIVE_ALARM_ID = "active_alarm_id"
+
+        fun activeAlarmId(context: Context): Long =
+            context.getSharedPreferences(STATE_FILE, MODE_PRIVATE)
+                .getLong(ACTIVE_ALARM_ID, -1)
+
+        fun clearActiveAlarmState(context: Context) {
+            context.getSharedPreferences(STATE_FILE, MODE_PRIVATE)
+                .edit().remove(ACTIVE_ALARM_ID).apply()
+        }
     }
 }

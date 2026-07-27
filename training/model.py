@@ -5,7 +5,8 @@ from torch import nn
 from torchvision.models.video import S3D_Weights, s3d
 
 FRAMES = 16
-SIZE = 160
+SIZE = 192
+SAMPLE_FPS = 8.0
 
 
 class BrushVideoClassifier(nn.Module):

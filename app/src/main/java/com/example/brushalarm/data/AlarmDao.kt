@@ -17,6 +17,9 @@ interface AlarmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(alarm: AlarmEntity): Long
 
+    @Query("UPDATE alarms SET nextTriggerAt = :triggerAt WHERE id = :id")
+    suspend fun updateNextTrigger(id: Long, triggerAt: Long)
+
     @Delete
     suspend fun delete(alarm: AlarmEntity)
 }

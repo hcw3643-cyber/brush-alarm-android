@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,18 +35,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.example.brushalarm.alarm.AlarmScheduler
+import com.example.brushalarm.alarm.AlarmReceiver
+import com.example.brushalarm.alarm.AlarmService
 import com.example.brushalarm.data.AlarmEntity
 import com.example.brushalarm.data.AlarmMode
+import com.example.brushalarm.ui.VerificationActivity
+import com.example.brushalarm.verification.InferenceLogFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     private val alarms = mutableStateListOf<AlarmEntity>()
     private var showTimeEditor by mutableStateOf(false)
     private var editingAlarm by mutableStateOf<AlarmEntity?>(null)
+    private var exactAlarmAllowed by mutableStateOf(true)
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) {}
@@ -65,15 +74,24 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (Build.VERSION.SDK_INT < 31 ||
+        val activeAlarmId = AlarmService.activeAlarmId(this)
+        if (activeAlarmId >= 0) {
+            startActivity(
+                Intent(this, VerificationActivity::class.java)
+                    .putExtra(AlarmReceiver.EXTRA_ID, activeAlarmId)
+            )
+            return
+        }
+        exactAlarmAllowed = Build.VERSION.SDK_INT < 31 ||
             getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
-        ) {
-            lifecycleScope.launch {
-                val enabled = withContext(Dispatchers.IO) {
-                    (application as BrushAlarmApp).database.alarms().enabled()
-                }
-                enabled.forEach { AlarmScheduler.schedule(this@MainActivity, it) }
+        // Re-register on every foreground entry. This restores alarms after an
+        // OEM process cleaner once the user opens the app again, and also keeps
+        // best-effort alarms registered when exact access has not been granted.
+        lifecycleScope.launch {
+            val enabled = withContext(Dispatchers.IO) {
+                (application as BrushAlarmApp).database.alarms().enabled()
             }
+            enabled.forEach { scheduleAndPersist(it) }
         }
     }
 
@@ -106,8 +124,37 @@ class MainActivity : ComponentActivity() {
                 Text(
                     "起床不是按掉闹钟，是完成刷牙。",
                     color = Color(0xFF58635F),
-                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                    modifier = Modifier.padding(top = 4.dp)
                 )
+                if (!exactAlarmAllowed) {
+                    Card(
+                        colors = CardDefaults.cardColors(Color(0xFFFFE3B3)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
+                            .clickable { requestExactAlarmIfNeeded() }
+                    ) {
+                        Text(
+                            "尚未允许“闹钟和提醒”，系统只能近似触发。点此授权，" +
+                                "否则锁屏、待机或清理后台后可能延迟。",
+                            modifier = Modifier.padding(14.dp),
+                            color = Color(0xFF5D4300)
+                        )
+                    }
+                }
+                TextButton(
+                    onClick = {
+                        if (!InferenceLogFiles.shareLatest(this@MainActivity)) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "还没有可导出的推理日志",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) { Text("导出最近一次识别日志") }
                 if (alarms.isEmpty()) {
                     Card(colors = CardDefaults.cardColors(Color.White)) {
                         Text(
@@ -149,6 +196,14 @@ class MainActivity : ComponentActivity() {
                     color = Color(0xFF7B8581),
                     fontSize = 12.sp
                 )
+                if (alarm.enabled && alarm.nextTriggerAt > 0) {
+                    Text(
+                        "下次：${formatTriggerTime(alarm.nextTriggerAt)}" +
+                            if (exactAlarmAllowed) "（系统精确闹钟）" else "（可能延迟）",
+                        color = Color(0xFF66716D),
+                        fontSize = 12.sp
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("模式", modifier = Modifier.padding(end = 12.dp))
                     FilterChip(
@@ -199,7 +254,7 @@ class MainActivity : ComponentActivity() {
                 ?: AlarmEntity(hour = hour, minute = minute)
             val id = withContext(Dispatchers.IO) { dao.upsert(draft) }
             val saved = draft.copy(id = id)
-            if (saved.enabled) AlarmScheduler.schedule(this@MainActivity, saved)
+            if (saved.enabled) scheduleAndPersist(saved)
             requestExactAlarmIfNeeded()
         }
     }
@@ -210,8 +265,16 @@ class MainActivity : ComponentActivity() {
             withContext(Dispatchers.IO) {
                 (application as BrushAlarmApp).database.alarms().upsert(changed)
             }
-            if (enabled) AlarmScheduler.schedule(this@MainActivity, changed)
-            else AlarmScheduler.cancel(this@MainActivity, alarm.id)
+            if (enabled) {
+                scheduleAndPersist(changed)
+                requestExactAlarmIfNeeded()
+            } else {
+                AlarmScheduler.cancel(this@MainActivity, alarm.id)
+                withContext(Dispatchers.IO) {
+                    (application as BrushAlarmApp).database.alarms()
+                        .updateNextTrigger(alarm.id, 0)
+                }
+            }
         }
     }
 
@@ -229,7 +292,18 @@ class MainActivity : ComponentActivity() {
             withContext(Dispatchers.IO) {
                 (application as BrushAlarmApp).database.alarms().upsert(alarm)
             }
-            if (alarm.enabled) AlarmScheduler.schedule(this@MainActivity, alarm)
+            if (alarm.enabled) {
+                scheduleAndPersist(alarm)
+                requestExactAlarmIfNeeded()
+            }
+        }
+    }
+
+    private suspend fun scheduleAndPersist(alarm: AlarmEntity) {
+        val scheduled = AlarmScheduler.schedule(this, alarm)
+        withContext(Dispatchers.IO) {
+            (application as BrushAlarmApp).database.alarms()
+                .updateNextTrigger(alarm.id, scheduled.triggerAt)
         }
     }
 
@@ -248,6 +322,11 @@ class MainActivity : ComponentActivity() {
                 data = Uri.parse("package:$packageName")
             })
         }
+    }
+
+    private fun formatTriggerTime(epochMillis: Long): String {
+        return DateTimeFormatter.ofPattern("M月d日 E HH:mm")
+            .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
     }
 }
 
@@ -270,7 +349,12 @@ private fun DayToggle(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier, contentAlignment = Alignment.Center) {
+    Box(
+        modifier
+            .height(40.dp)
+            .toggleable(value = selected, onValueChange = { onClick() }),
+        contentAlignment = Alignment.Center
+    ) {
         Surface(
             shape = androidx.compose.foundation.shape.CircleShape,
             color = if (selected) MaterialTheme.colorScheme.primary
@@ -278,8 +362,7 @@ private fun DayToggle(
             contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
             else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
-                .size(36.dp)
-                .toggleable(value = selected, onValueChange = { onClick() })
+                .size(32.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium)

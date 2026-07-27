@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import onnx
@@ -7,7 +8,20 @@ from onnx.external_data_helper import convert_model_from_external_data
 from model import FRAMES, SIZE, BrushVideoClassifier
 
 ROOT = Path(__file__).resolve().parent
-checkpoint = torch.load(ROOT / "checkpoints/best.pt", map_location="cpu", weights_only=True)
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--checkpoint",
+    type=Path,
+    default=(
+        ROOT / "checkpoints/best-feedback-2s-192.pt"
+        if (ROOT / "checkpoints/best-feedback-2s-192.pt").exists()
+        else ROOT / "checkpoints/best-2s-192.pt"
+    ),
+)
+args = parser.parse_args()
+checkpoint = torch.load(
+    args.checkpoint, map_location="cpu", weights_only=True
+)
 model = BrushVideoClassifier(pretrained=False)
 model.load_state_dict(checkpoint["model"])
 model.eval()
@@ -32,4 +46,4 @@ sidecar = output.with_suffix(output.suffix + ".data")
 if sidecar.exists():
     sidecar.unlink()
 onnx.checker.check_model(onnx.load(output))
-print(output, output.stat().st_size, checkpoint.get("metrics"))
+print(output, output.stat().st_size, args.checkpoint, checkpoint.get("metrics"))

@@ -10,11 +10,17 @@ import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            AlarmService.clearActiveAlarmState(context)
+        }
         val result = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val dao = (context.applicationContext as BrushAlarmApp).database.alarms()
-                dao.enabled().forEach { AlarmScheduler.schedule(context, it) }
+                dao.enabled().forEach {
+                    val result = AlarmScheduler.schedule(context, it)
+                    dao.updateNextTrigger(it.id, result.triggerAt)
+                }
             } finally { result.finish() }
         }
     }

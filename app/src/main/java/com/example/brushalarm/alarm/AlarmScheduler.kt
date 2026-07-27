@@ -10,6 +10,8 @@ import com.example.brushalarm.data.AlarmEntity
 import java.time.ZonedDateTime
 
 object AlarmScheduler {
+    data class ScheduleResult(val triggerAt: Long, val exact: Boolean)
+
     fun nextTime(
         hour: Int,
         minute: Int,
@@ -32,7 +34,7 @@ object AlarmScheduler {
         context: Context,
         alarm: AlarmEntity,
         at: Long = nextTime(alarm.hour, alarm.minute, alarm.weekdays)
-    ) {
+    ): ScheduleResult {
         val manager = context.getSystemService(AlarmManager::class.java)
         val intent = Intent(context, AlarmReceiver::class.java)
             .putExtra(AlarmReceiver.EXTRA_ID, alarm.id)
@@ -40,7 +42,8 @@ object AlarmScheduler {
             context, alarm.id.toInt(), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        if (Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms()) {
+        var exact = Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms()
+        if (exact) {
             val showAlarm = PendingIntent.getActivity(
                 context,
                 alarm.id.toInt(),
@@ -56,10 +59,12 @@ object AlarmScheduler {
                 // Exact-alarm access can be revoked between the permission check
                 // and this call. Keep a best-effort alarm instead of losing it.
                 manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                exact = false
             }
         } else {
             manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
         }
+        return ScheduleResult(at, exact)
     }
 
     fun cancel(context: Context, id: Long) {
