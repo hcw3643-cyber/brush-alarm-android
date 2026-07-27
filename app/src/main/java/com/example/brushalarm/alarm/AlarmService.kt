@@ -8,6 +8,8 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.UserManager
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.example.brushalarm.BrushAlarmApp
 import com.example.brushalarm.R
@@ -31,13 +33,18 @@ class AlarmService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        AlarmDiagnosticLog.record(
+            this,
+            event = "service_start_command",
+            alarmId = intent?.getLongExtra(AlarmReceiver.EXTRA_ID, -1) ?: -1,
+            details = "action=${intent?.action}"
+        )
         when (intent?.action) {
             ACTION_VERIFIED -> finishAlarm()
             ACTION_QUIET -> if (mode == AlarmMode.ROOMMATE) quietForOneMinute()
             ACTION_START -> beginAlarm(intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1))
             null -> {
-                val activeId = getSharedPreferences(STATE_FILE, MODE_PRIVATE)
-                    .getLong(ACTIVE_ALARM_ID, -1)
+                val activeId = activeAlarmId(this)
                 if (activeId >= 0) beginAlarm(activeId) else stopSelf()
             }
         }
@@ -55,8 +62,11 @@ class AlarmService : Service() {
         }
         alarmId = id
         alarmLoading = true
-        getSharedPreferences(STATE_FILE, MODE_PRIVATE)
-            .edit().putLong(ACTIVE_ALARM_ID, id).apply()
+        acquireWakeLock()
+        statePreferences(this).edit()
+            .putLong(ACTIVE_ALARM_ID, id)
+            .putInt(ACTIVE_BOOT_COUNT, bootCount(this))
+            .apply()
         // A cold process must enter the foreground immediately. Room is opened
         // afterwards; waiting for it here can exceed Android's deadline.
         startForeground(NOTIFICATION_ID, notification("起床刷牙"))
@@ -65,8 +75,13 @@ class AlarmService : Service() {
 
     private fun start(id: Long) {
         scope.launch {
+            val userUnlocked = getSystemService(UserManager::class.java).isUserUnlocked
             val alarm = withContext(Dispatchers.IO) {
-                (application as BrushAlarmApp).database.alarms().get(id)
+                if (userUnlocked) {
+                    (application as BrushAlarmApp).database.alarms().get(id)
+                } else {
+                    DirectBootAlarmStore.get(this@AlarmService, id)
+                }
             } ?: run {
                 alarmLoading = false
                 clearActiveAlarm()
@@ -79,14 +94,14 @@ class AlarmService : Service() {
             alarmLoaded = true
             // Refresh the placeholder with the configured label and roommate action.
             startForeground(NOTIFICATION_ID, notification(alarm.label))
-            wakeLock = getSystemService(PowerManager::class.java)
-                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BrushAlarm:ringing")
-                .apply { acquire(30 * 60_000L) }
             ring()
+            AlarmDiagnosticLog.record(this@AlarmService, "ring_started", alarm.id)
             val scheduled = AlarmScheduler.schedule(this@AlarmService, alarm)
-            withContext(Dispatchers.IO) {
-                (application as BrushAlarmApp).database.alarms()
-                    .updateNextTrigger(alarm.id, scheduled.triggerAt)
+            if (userUnlocked) {
+                withContext(Dispatchers.IO) {
+                    (application as BrushAlarmApp).database.alarms()
+                        .updateNextTrigger(alarm.id, scheduled.triggerAt)
+                }
             }
         }
     }
@@ -102,6 +117,13 @@ class AlarmService : Service() {
             if (android.os.Build.VERSION.SDK_INT >= 28) isLooping = true
             play()
         }
+    }
+
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        wakeLock = getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BrushAlarm:ringing")
+            .apply { acquire(30 * 60_000L) }
     }
 
     private fun quietForOneMinute() {
@@ -123,7 +145,7 @@ class AlarmService : Service() {
     }
 
     private fun clearActiveAlarm() {
-        getSharedPreferences(STATE_FILE, MODE_PRIVATE)
+        statePreferences(this)
             .edit().remove(ACTIVE_ALARM_ID).apply()
     }
 
@@ -180,14 +202,36 @@ class AlarmService : Service() {
         private const val NOTIFICATION_ID = 4201
         private const val STATE_FILE = "active_alarm_state"
         private const val ACTIVE_ALARM_ID = "active_alarm_id"
+        private const val ACTIVE_BOOT_COUNT = "active_boot_count"
 
-        fun activeAlarmId(context: Context): Long =
-            context.getSharedPreferences(STATE_FILE, MODE_PRIVATE)
-                .getLong(ACTIVE_ALARM_ID, -1)
+        fun activeAlarmId(context: Context): Long {
+            val preferences = statePreferences(context)
+            return if (
+                preferences.getInt(ACTIVE_BOOT_COUNT, Int.MIN_VALUE) == bootCount(context)
+            ) {
+                preferences.getLong(ACTIVE_ALARM_ID, -1)
+            } else {
+                -1
+            }
+        }
 
         fun clearActiveAlarmState(context: Context) {
-            context.getSharedPreferences(STATE_FILE, MODE_PRIVATE)
-                .edit().remove(ACTIVE_ALARM_ID).apply()
+            statePreferences(context)
+                .edit()
+                .remove(ACTIVE_ALARM_ID)
+                .remove(ACTIVE_BOOT_COUNT)
+                .apply()
         }
+
+        private fun statePreferences(context: Context) =
+            context.createDeviceProtectedStorageContext()
+                .getSharedPreferences(STATE_FILE, MODE_PRIVATE)
+
+        private fun bootCount(context: Context): Int =
+            Settings.Global.getInt(
+                context.contentResolver,
+                Settings.Global.BOOT_COUNT,
+                -1
+            )
     }
 }

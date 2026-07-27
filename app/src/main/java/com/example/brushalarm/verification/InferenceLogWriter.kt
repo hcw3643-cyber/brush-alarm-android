@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.UserManager
 import androidx.core.content.FileProvider
 import com.example.brushalarm.BuildConfig
 import java.io.BufferedWriter
@@ -101,7 +102,15 @@ internal object InferenceLogFiles {
     private const val MAX_LOG_FILES = 20
 
     fun newSessionFile(context: Context): File {
-        val directory = File(context.filesDir, DIRECTORY).apply { mkdirs() }
+        val storageContext = if (
+            Build.VERSION.SDK_INT >= 24 &&
+            !context.getSystemService(UserManager::class.java).isUserUnlocked
+        ) {
+            context.createDeviceProtectedStorageContext()
+        } else {
+            context
+        }
+        val directory = File(storageContext.filesDir, DIRECTORY).apply { mkdirs() }
         directory.listFiles()
             ?.sortedByDescending { it.lastModified() }
             ?.drop(MAX_LOG_FILES - 1)
@@ -110,6 +119,7 @@ internal object InferenceLogFiles {
     }
 
     fun shareLatest(activity: Activity): Boolean {
+        migrateDirectBootLogs(activity)
         val latest = File(activity.filesDir, DIRECTORY)
             .listFiles()
             ?.filter { it.extension == "csv" }
@@ -131,5 +141,21 @@ internal object InferenceLogFiles {
             )
         )
         return true
+    }
+
+    private fun migrateDirectBootLogs(context: Context) {
+        val destination = File(context.filesDir, DIRECTORY).apply { mkdirs() }
+        val source = File(
+            context.createDeviceProtectedStorageContext().filesDir,
+            DIRECTORY
+        )
+        if (source.absolutePath == destination.absolutePath) return
+        source.listFiles()
+            ?.filter { it.extension == "csv" }
+            ?.forEach { file ->
+                val target = File(destination, file.name)
+                if (!target.exists()) file.copyTo(target)
+                file.delete()
+            }
     }
 }

@@ -3,4 +3,7 @@
     <files-path
         name="inference_logs"
         path="inference_logs/" />
+    <files-path
+        name="alarm_diagnostics"
+        path="alarm_diagnostics/" />
 </paths>

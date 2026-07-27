@@ -37,6 +37,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.brushalarm.alarm.AlarmScheduler
 import com.example.brushalarm.alarm.AlarmReceiver
 import com.example.brushalarm.alarm.AlarmService
+import com.example.brushalarm.alarm.AlarmDiagnosticLog
 import com.example.brushalarm.data.AlarmEntity
 import com.example.brushalarm.data.AlarmMode
 import com.example.brushalarm.ui.VerificationActivity
@@ -155,6 +156,19 @@ class MainActivity : ComponentActivity() {
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier.padding(bottom = 12.dp)
                 ) { Text("导出最近一次识别日志") }
+                TextButton(
+                    onClick = {
+                        if (!AlarmDiagnosticLog.share(this@MainActivity)) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "还没有闹钟诊断日志",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) { Text("导出闹钟诊断日志") }
                 if (alarms.isEmpty()) {
                     Card(colors = CardDefaults.cardColors(Color.White)) {
                         Text(

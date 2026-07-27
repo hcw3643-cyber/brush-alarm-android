@@ -26,6 +26,7 @@
         android:theme="@style/Theme.BrushAlarm">
         <activity
             android:name=".ui.VerificationActivity"
+            android:directBootAware="true"
             android:exported="false"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
@@ -41,13 +42,16 @@
         </activity>
         <receiver
             android:name=".alarm.AlarmReceiver"
+            android:directBootAware="true"
             android:exported="false" />
         <receiver
             android:name=".alarm.BootReceiver"
+            android:directBootAware="true"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.DATE_CHANGED" />
                 <action android:name="android.intent.action.TIME_SET" />
@@ -57,6 +61,7 @@
         </receiver>
         <service
             android:name=".alarm.AlarmService"
+            android:directBootAware="true"
             android:exported="false"
             android:stopWithTask="false"
             android:foregroundServiceType="mediaPlayback" />

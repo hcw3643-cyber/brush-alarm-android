@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.UserManager
 import android.util.Size
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
@@ -33,6 +34,7 @@ import com.example.brushalarm.BrushAlarmApp
 import com.example.brushalarm.BuildConfig
 import com.example.brushalarm.alarm.AlarmReceiver
 import com.example.brushalarm.alarm.AlarmService
+import com.example.brushalarm.alarm.DirectBootAlarmStore
 import com.example.brushalarm.data.AlarmMode
 import com.example.brushalarm.verification.BrushMotionAnalyzer
 import kotlinx.coroutines.Dispatchers
@@ -70,8 +72,14 @@ class VerificationActivity : ComponentActivity() {
         val id = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
         lifecycleScope.launch {
             roommateMode = withContext(Dispatchers.IO) {
-                (application as BrushAlarmApp).database.alarms().get(id)?.mode ==
-                    AlarmMode.ROOMMATE
+                val alarm = if (
+                    getSystemService(UserManager::class.java).isUserUnlocked
+                ) {
+                    (application as BrushAlarmApp).database.alarms().get(id)
+                } else {
+                    DirectBootAlarmStore.get(this@VerificationActivity, id)
+                }
+                alarm?.mode == AlarmMode.ROOMMATE
             }
         }
         setContent {

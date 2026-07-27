@@ -64,6 +64,13 @@ object AlarmScheduler {
         } else {
             manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
         }
+        DirectBootAlarmStore.put(context, alarm.copy(nextTriggerAt = at))
+        AlarmDiagnosticLog.record(
+            context,
+            event = "scheduled",
+            alarmId = alarm.id,
+            details = "trigger_at=$at exact=$exact"
+        )
         return ScheduleResult(at, exact)
     }
 
@@ -74,5 +81,7 @@ object AlarmScheduler {
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
         pending?.let { context.getSystemService(AlarmManager::class.java).cancel(it) }
+        DirectBootAlarmStore.remove(context, id)
+        AlarmDiagnosticLog.record(context, "canceled", id)
     }
 }
