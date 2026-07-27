@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Leo Huang
+# SPDX-License-Identifier: GPL-3.0-only
+
 set -euo pipefail
 
 forbidden_pattern='(\.apk$|\.aab$|\.apks$|\.idsig$|\.jks$|\.keystore$|\.p12$|\.pem$|\.key$|(^|/)local\.properties$|(^|/)\.env($|\.)|\.mp4$|\.mov$|\.avi$|\.mkv$|\.webm$|\.csv$|\.log$|\.pt$|\.pth$|\.ckpt$|brush_classifier\.onnx$|__pycache__|\.pyc$)'

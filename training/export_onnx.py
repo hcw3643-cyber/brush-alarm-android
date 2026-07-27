@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Leo Huang
+# SPDX-License-Identifier: GPL-3.0-only
+
 import argparse
 from pathlib import Path
 

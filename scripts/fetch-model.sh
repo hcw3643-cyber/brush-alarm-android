@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Leo Huang
+# SPDX-License-Identifier: GPL-3.0-only
+
 set -euo pipefail
 
 repository="${BRUSH_ALARM_REPOSITORY:-hcw3643-cyber/brush-alarm-android}"

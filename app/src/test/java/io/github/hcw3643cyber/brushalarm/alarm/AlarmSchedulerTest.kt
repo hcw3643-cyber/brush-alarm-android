@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Leo Huang
+// SPDX-License-Identifier: GPL-3.0-only
+
 package io.github.hcw3643cyber.brushalarm.alarm
 
 import org.junit.Assert.assertEquals

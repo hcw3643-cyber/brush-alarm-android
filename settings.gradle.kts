@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Leo Huang
+// SPDX-License-Identifier: GPL-3.0-only
+
 pluginManagement {
     repositories {
         maven("https://repo.huaweicloud.com/repository/maven")

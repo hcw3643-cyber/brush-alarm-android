@@ -7,18 +7,16 @@
 一个只有完成刷牙动作验证后才会停止的 Android 闹钟。
 
 > [!IMPORTANT]
-> 本项目是非商业、社区驱动的实验性软件，目前只在 vivo X300（Android 16 /
+> 本项目是社区驱动的实验性自由软件，目前只在 vivo X300（Android 16 /
 > OriginOS 6）上完成端到端测试。它不是经过多品牌兼容性认证的医疗、健康或强制叫醒产品，
 > 请保留系统闹钟等备用唤醒方式。
 
 ## 项目定位
 
-- 普通用户可以免费安装、自行构建、修改和分享。
-- 学校、公益组织和非商业研究可以免费使用。
-- 不允许收费销售、广告变现、商业集成、预装销售或提供收费模型/API 服务。
-- 源码使用
-  [PolyForm Noncommercial 1.0.0](LICENSE)，属于“非商业开放源码
-  （source-available）”，不是 OSI 定义下允许商业用途的开源软件。
+- 软件源代码使用 [GNU GPL v3.0 only](LICENSE)；任何人可以运行、研究、修改和分发，
+  包括商业使用，但分发修改版或 APK 时必须遵守 GPLv3 的对应源码和同许可证要求。
+- `brush_classifier.onnx` 不是 GPL 软件代码，继续适用独立的
+  [模型许可和来源限制](MODEL_LICENSE.md)。软件许可证不替模型或训练数据补齐权利。
 - App 不上传摄像头画面；正式版不写入或导出推理日志。
 
 ## 已实现
@@ -106,7 +104,7 @@ Windows PowerShell：
 
 模型以 TorchVision S3D/Kinetics-400 权重为基础，在 UCF101 刷牙和困难负样本上微调，
 并使用一段经维护者同意的真机视频做域适配。第三方数据条款并不完全明确，因此模型
-作为非商业实验性资产发布，不宣称获得 UCF101 原始视频的再分发权，也不包含任何
+作为独立实验性资产发布，不宣称获得 UCF101 原始视频的再分发权，也不包含任何
 原始训练视频。详见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md) 和
 [MODEL_LICENSE.md](MODEL_LICENSE.md)。
 
@@ -129,7 +127,7 @@ Windows PowerShell：
 ├── docs/                架构、兼容性、模型、隐私和数据贡献文档
 ├── design/              Logo 源文件
 ├── .github/             Issue 表单
-├── LICENSE              非商业软件许可证
+├── LICENSE              GNU GPL v3.0 软件许可证
 ├── MODEL_LICENSE.md     模型权重许可边界
 └── THIRD_PARTY_NOTICES.md
 ```
@@ -145,10 +143,15 @@ Windows PowerShell：
 ## 许可
 
 - 维护者：Leo Huang
-- 本项目原创软件：PolyForm Noncommercial 1.0.0
+- 本项目原创软件代码、仓库文档与原创美术资源：GNU GPL v3.0 only
+  （SPDX：`GPL-3.0-only`）
 - 当前模型中项目方可许可的部分：CC BY-NC 4.0
 - 第三方组件和基础权重：保持各自原始条款
 - Logo 和“刷牙闹钟”名称不随软件许可证授予商标或冒充官方版本的权利
+
+GPL 允许商业使用和收费分发，但分发者必须履行 GPLv3，不能把该软件的衍生版本改成
+闭源专有软件。模型权重不包含在根目录 `LICENSE` 的授权范围内；分发包含模型的 APK
+前还必须分别确认并遵守 [MODEL_LICENSE.md](MODEL_LICENSE.md) 及第三方来源条款。
 
 详情见 [LICENSE](LICENSE)、[MODEL_LICENSE.md](MODEL_LICENSE.md) 和
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

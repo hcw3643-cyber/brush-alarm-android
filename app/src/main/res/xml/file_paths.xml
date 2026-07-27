@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Leo Huang
+  SPDX-License-Identifier: GPL-3.0-only
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <files-path
         name="inference_logs"

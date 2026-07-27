@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Leo Huang
+# SPDX-License-Identifier: GPL-3.0-only
+
 $ErrorActionPreference = "Stop"
 
 $repository = if ($env:BRUSH_ALARM_REPOSITORY) {

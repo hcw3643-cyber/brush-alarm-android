@@ -1,5 +1,9 @@
 # 模型许可说明
 
+> 本文件只适用于模型权重，不适用于仓库中的软件代码。软件代码使用根目录
+> [LICENSE](LICENSE) 中的 GNU GPL v3.0 only。模型不因被 App 加载或与源码在同一
+> Release 中发布而自动改为 GPL。
+
 ## 许可范围
 
 `brush_classifier.onnx` 中由项目维护者拥有并有权许可的贡献，以
