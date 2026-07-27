@@ -1,88 +1,149 @@
-# 刷牙闹钟（Android MVP）
+<p align="center">
+  <img src="design/brush-alarm-logo-source.png" width="160" alt="刷牙闹钟 Logo">
+</p>
 
-一个只有完成刷牙动作验证后才会彻底停止的 Android 闹钟。
+# 刷牙闹钟
+
+一个只有完成刷牙动作验证后才会停止的 Android 闹钟。
+
+> [!IMPORTANT]
+> 本项目是非商业、社区驱动的实验性软件，目前只在维护者的一台 vivo/OriginOS
+> 真机上完成端到端测试。它不是经过多品牌兼容性认证的医疗、健康或强制叫醒产品，
+> 请保留系统闹钟等备用唤醒方式。
+
+## 项目定位
+
+- 普通用户可以免费安装、自行构建、修改和分享。
+- 学校、公益组织和非商业研究可以免费使用。
+- 不允许收费销售、广告变现、商业集成、预装销售或提供收费模型/API 服务。
+- 源码使用
+  [PolyForm Noncommercial 1.0.0](LICENSE)，属于“非商业开放源码
+  （source-available）”，不是 OSI 定义下允许商业用途的开源软件。
+- App 不上传摄像头画面；正式版不写入或导出推理日志。
 
 ## 已实现
 
-- 创建、启用、停用和删除每日闹钟
-- 点击闹钟编辑时间；周一至周日可分别选择
-- 持续模式：铃声一直播放，验证通过后停止
-- 舍友模式：可暂时静音，60 秒后自动再次响铃
-- Android `AlarmManager` 精确闹钟、锁屏全屏响铃通知、Direct Boot 解锁前恢复
-- 针对厂商熄屏延迟，同时登记 RTC 闹钟和 elapsed-realtime 唤醒看门狗并去重
-- Android 15+ 显式授权全屏 PendingIntent 的后台 Activity 启动，锁屏直接进入验证
-- 验证页请求 Android“屏幕固定”，降低 Home/最近任务误退出风险
-- Receiver 触发时先登记下一次，设备重启/升级/改时区后自动恢复
-- 前置摄像头端侧 ONNX 视频模型验证；帧不保存、不上传
-- 测试版数值推理日志，可导出用于真机阈值标定
-- 设备加密区闹钟链路日志，用于定位厂商清后台和熄屏拦截
+- 创建、编辑、启用、停用和删除闹钟
+- 周一至周日分别选择重复日期
+- 苹果风格的小时/分钟滚轮
+- 持续模式：闹铃持续播放，完成刷牙验证后停止
+- 舍友模式：允许暂时静音，未完成验证时每分钟复响
+- `AlarmManager` 精确闹钟、全屏通知、前台响铃服务和 CPU 唤醒锁
+- 熄屏、划掉最近任务、设备重启和 Direct Boot 后重新登记闹钟
+- 前置摄像头端侧 ONNX 视频模型；画面只在内存中处理
+- 验证页禁用返回键、隐藏最近任务，并请求 Android“屏幕固定”
+- 独立 Debug 测试版：保留数值日志和人工标签，不与正式版数据混用
 
-## 刷牙识别模型
+## 已知限制
 
-模型以 Kinetics-400 预训练 S3D 为基础，使用 UCF101 的 `BrushingTeeth` 正样本以及
-`ApplyLipstick`、`BlowDryHair`、`HeadMassage`、`ShavingBeard` 困难负样本微调。
-它直接学习牙刷、手臂、嘴部和时间变化，而不是检测人脸抖动。相机按时间戳采样
-8 fps，模型一次读取 16 帧（实际跨度 1.875 秒）、192×192 RGB 画面，每 0.5 秒
-产生一个重叠窗口结果。训练和 App 使用完全相同的帧率、尺寸、RGB 顺序与归一化。
-第二阶段混合了一段经用户提供的真实前置摄像头刷牙录屏和公开困难负样本；在仍然
-隔离的 UCF 验证视频上，按每个原视频汇总后的 F1 为 93.83%。App 使用 0.65
-高门限；真机测试表明长时间刷牙时 0.70 会漏掉过多有效窗口，因此在保持低门限
-回退逻辑不变的前提下略微下调。
+- Android 厂商可额外限制自启动、后台弹出、锁屏显示和耗电行为。首次启动会集中引导
+  所需权限，之后可从首页右上角设置重新打开。
+- 普通 App 无法阻止系统“强行停止”，也无法实现 Device Owner/Kiosk 等级的完全锁定。
+- 当前模型的训练用户和真实设备覆盖不足，可能在不同面孔、牙刷、角度和光线下漏检。
+- 当前兼容性范围和测试方法见
+  [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。
 
-这些数据仍是公开动作数据集，不能代表所有手机、浴室光线和真实用户。正式发布前
-仍应在取得同意后采集真机前置摄像头的刷牙、假刷牙和嘴边相似动作做第二轮微调，
-并为摄像头不可用的用户保留备用验证方式。
+## 从源码运行
 
-## 运行
+### 1. 环境
 
-用 Android Studio Ladybug 或更高版本打开目录，等待 Gradle 同步后运行 `app`。
-最低 Android 8.0（API 26），建议在真机测试闹铃、锁屏和厂商省电策略。
+- Android Studio Ladybug 或更高版本
+- JDK 17
+- Android SDK 35
+- Android 8.0（API 26）或更高版本真机
 
-工程使用华为云、阿里云和腾讯云 Maven 镜像，并将 Gradle 发行包切换到华为云镜像。首次构建如果
-`gradle/wrapper/gradle-wrapper.jar` 尚不存在，可在装有 Gradle 的联网环境执行
-`gradle wrapper --gradle-version 8.10.2` 生成，或直接使用 Android Studio 同步。
+工程优先使用华为云、阿里云和腾讯云 Maven 镜像，并保留官方仓库作为回退。
 
-首次启动会显示集中权限向导，之后可从首页右上角设置按钮重新打开。需要：
+### 2. 获取模型
 
-1. 通知权限；
-2. “闹钟和提醒”精确闹钟权限；
-3. 响铃验证时的摄像头权限。
-4. 全屏闹钟、电池不受限，以及厂商自启动/后台弹出界面权限；
-5. 若希望限制 Home/最近任务手势，在系统安全设置中开启“屏幕固定/固定应用”。
+模型不放入 Git 历史，而是作为独立 Release 资产发布。将
+`brush_classifier.onnx` 下载到：
 
-不同厂商可能还需要手动允许后台运行/关闭电池优化。部分 vivo/OriginOS 版本会把
-“划掉最近任务”升级为 Android 的“停止应用”状态；Android 15+ 会在该状态下撤销
-应用的全部 PendingIntent，因此任何应用代码都无法在停止期间自行拉起。首页会
-提示开启 vivo 的“自启动”和“允许后台高耗电”，并提供电池不受限、全屏闹钟和
-应用设置入口。重新打开 App 后只重新登记下一次闹钟，不对已经错过的闹钟补响。
+```text
+app/src/main/assets/brush_classifier.onnx
+```
 
-闹钟的最小配置会同步到设备加密存储。系统半夜重启后，App 通过
-`LOCKED_BOOT_COMPLETED` 在用户首次解锁前重新登记闹钟；响铃服务在读取数据库前
-先取得 CPU 唤醒锁。首页“导出闹钟诊断日志”可确认系统是否完成了 `scheduled`、
-`receiver_fired`、`service_start_command` 和 `ring_started` 四段链路。
+仓库转为公开后可使用：
 
-训练和导出说明见 [`training/README.md`](training/README.md)。模型通过
-ONNX Runtime Mobile 完全在手机 CPU 上运行，不依赖电脑、云端或手机 GPU。
+```bash
+./scripts/fetch-model.sh
+```
 
-Debug 测试版验证页可手动标记“正在刷牙/已经停止”，首页可导出最近一次 CSV。日志只含
-模型数值、窗口实际帧率、推理耗时、判定进度和设备型号，不保存图片、视频或音频。
-可用 `training/analyze_inference_logs.py` 汇总多台真机日志。
+Windows PowerShell：
 
-正式 Release 版不显示手工标签和日志导出入口，也不写入推理/闹钟诊断 CSV。
-工程基础版本号为 `1.0.0`；Debug 自动使用独立包名和 `-test` 后缀，可与正式版并存。
+```powershell
+.\scripts\fetch-model.ps1
+```
 
-屏幕固定不是不可破解的 kiosk。普通用户始终可以按系统规定解除固定，也可以在系统
-设置中强行停止应用；彻底屏蔽 Home/最近任务和退出只适用于由 Device Owner 管理的
-专用设备 Lock Task 模式。
+私有仓库审阅期间也可以从 `model-v1.0.0` Release 手工下载。模型来源、输入格式、
+指标和限制见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)。
 
-真机日志显示约 625ms 产生一次输出，因此证据桶要求累计 6 秒高置信度证据；在该
-输出频率下每次正判定约增加 10% 进度。低置信度时的百分比回退速度保持原样，
-高低门限为 0.65/0.10。
+### 3. 构建
 
-## 后续产品化工作
+```bash
+./gradlew testDebugUnitTest testReleaseUnitTest
+./gradlew assembleDebug assembleRelease
+```
 
-- 防作弊时长与随机挑战（例如左右两侧各刷若干秒）
-- 铃声/音量、振动与渐强，UI 自动化与更多真机兼容测试
-- 无障碍与无法使用摄像头时的备用任务
+- `debug`：独立测试包，版本名带 `-test`，包含数值日志和人工标签。
+- `release`：正式功能包，不创建推理/闹钟诊断 CSV，也不显示导出入口。
+- Gradle 生成的 Release APK 默认未使用项目正式密钥签名；签名库绝不能提交到仓库。
 
-开源发布文件清单、排除项和模型/签名注意事项见 [`OPEN_SOURCE.md`](OPEN_SOURCE.md)。
+## 识别模型概要
+
+输入为最近约两秒的动作窗口：
+
+- 16 帧 RGB
+- 8 fps 时间戳采样，窗口跨度约 1.875 秒
+- 每帧中心裁剪并缩放到 192×192
+- 每 0.5 秒产生一个重叠窗口结果
+- 高/低置信度门限为 0.65/0.10
+- 需要累计 6 秒高置信度证据
+
+模型以 TorchVision S3D/Kinetics-400 权重为基础，在 UCF101 刷牙和困难负样本上微调，
+并使用一段经维护者同意的真机视频做域适配。第三方数据条款并不完全明确，因此模型
+作为非商业实验性资产发布，不宣称获得 UCF101 原始视频的再分发权，也不包含任何
+原始训练视频。详见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md) 和
+[MODEL_LICENSE.md](MODEL_LICENSE.md)。
+
+## 参与项目
+
+- 一般 Bug、设备兼容性和数值模型反馈请使用仓库 Issue 表单。
+- 不要把正脸视频、浴室画面、原始日志或其他个人信息上传到公开 Issue、PR 或仓库。
+- 志愿者视频征集尚未开放；开放前必须先启用私密上传、单独同意和删除流程。
+- 代码贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 数据贡献原则见
+  [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)。
+
+## 项目结构
+
+```text
+.
+├── app/                 Android App、资源和测试
+├── training/            训练、标定和 ONNX 导出脚本
+├── scripts/             模型下载与发布前检查脚本
+├── docs/                架构、兼容性、模型、隐私和数据贡献文档
+├── design/              Logo 源文件
+├── .github/             Issue 表单
+├── LICENSE              非商业软件许可证
+├── MODEL_LICENSE.md     模型权重许可边界
+└── THIRD_PARTY_NOTICES.md
+```
+
+更详细的数据流和组件职责见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+
+## 隐私与安全
+
+正式版摄像头帧只在手机内存中实时分析，不保存、不上传。测试版日志只包含模型数值、
+时间和设备信息，不包含图像、视频或音频，但分享前仍应人工检查。完整说明见
+[docs/PRIVACY.md](docs/PRIVACY.md)；安全问题请遵循 [SECURITY.md](SECURITY.md)。
+
+## 许可
+
+- 本项目原创软件：PolyForm Noncommercial 1.0.0
+- 当前模型中项目方可许可的部分：CC BY-NC 4.0
+- 第三方组件和基础权重：保持各自原始条款
+- Logo 和“刷牙闹钟”名称不随软件许可证授予商标或冒充官方版本的权利
+
+详情见 [LICENSE](LICENSE)、[MODEL_LICENSE.md](MODEL_LICENSE.md) 和
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

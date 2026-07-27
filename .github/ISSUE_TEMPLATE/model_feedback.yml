@@ -1,0 +1,54 @@
+name: 模型识别反馈
+description: 不上传视频的刷牙识别数值与场景反馈
+title: "[模型] "
+labels:
+  - model
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本表单只接受文字与脱敏后的聚合数值。不要上传视频、照片、浴室画面或原始 CSV。
+  - type: input
+    id: version
+    attributes:
+      label: App 与模型版本
+      placeholder: 例如 1.0.0 / s3d-brush-2s-192-feedback-v1
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: 设备与系统
+    validations:
+      required: true
+  - type: textarea
+    id: conditions
+    attributes:
+      label: 场景说明
+      description: 可描述光线、手机距离、角度、牙刷类型和动作，不要写可识别个人的信息。
+    validations:
+      required: true
+  - type: dropdown
+    id: behavior
+    attributes:
+      label: 主要问题
+      options:
+        - 真实刷牙漏检
+        - 未刷牙误报
+        - 进度响应过慢
+        - 进度与动作不同步
+        - 其他数值表现
+    validations:
+      required: true
+  - type: textarea
+    id: aggregates
+    attributes:
+      label: 可选的脱敏聚合数值
+      description: 例如总时长、通过时间、置信度分位数；不要粘贴原始逐行日志。
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 我没有附加视频、照片、个人信息或原始日志。
+          required: true

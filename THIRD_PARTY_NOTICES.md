@@ -1,0 +1,42 @@
+# 第三方组件与来源声明
+
+本文件是项目的依赖与来源索引。各项目的原始许可证文本具有最终效力；本项目的
+PolyForm Noncommercial 条款不会替换或收紧第三方组件已授予的权利。
+
+## Android App
+
+| 组件 | 用途 | 许可证 | 来源 |
+|---|---|---|---|
+| AndroidX / Compose / CameraX / Room | UI、相机、生命周期、数据库 | Apache-2.0 | https://android.googlesource.com/platform/frameworks/support/ |
+| Kotlin | Android 开发语言与插件 | Apache-2.0 | https://github.com/JetBrains/kotlin |
+| Gradle | 构建工具与 Wrapper | Apache-2.0 | https://github.com/gradle/gradle |
+| ONNX Runtime Android | 手机端 ONNX 推理 | MIT | https://github.com/microsoft/onnxruntime |
+| JUnit 4 | 单元测试 | EPL-1.0 | https://github.com/junit-team/junit4 |
+
+## 训练工具
+
+| 组件 | 用途 | 许可证 | 来源 |
+|---|---|---|---|
+| PyTorch | 模型训练与导出 | BSD-3-Clause | https://github.com/pytorch/pytorch |
+| TorchVision | S3D 网络与预训练权重接口 | BSD-3-Clause（源码） | https://github.com/pytorch/vision |
+| OpenCV | 视频解码与增强 | Apache-2.0 | https://github.com/opencv/opencv |
+| NumPy | 数值处理 | BSD-3-Clause | https://github.com/numpy/numpy |
+| ONNX | 模型格式与检查 | Apache-2.0 | https://github.com/onnx/onnx |
+| ONNX Script | ONNX 导出支持 | Apache-2.0 | https://github.com/microsoft/onnxscript |
+| ONNX Runtime Python | 导出后验证 | MIT | https://github.com/microsoft/onnxruntime |
+
+## 模型和数据来源
+
+- TorchVision S3D Kinetics-400 V1：
+  https://docs.pytorch.org/vision/main/models/generated/torchvision.models.video.s3d.html
+- TorchVision 预训练模型许可提示：
+  https://github.com/pytorch/vision#pre-trained-model-license
+- Kinetics 数据集下载与说明：
+  https://github.com/cvdfoundation/kinetics-dataset
+- UCF101 官方项目：
+  https://www.crcv.ucf.edu/research/data-sets/ucf101/
+- 当前训练脚本使用的 UCF101 镜像：
+  https://huggingface.co/datasets/guyuchao/UCF101
+
+Hugging Face 镜像未提供 Dataset Card 或明确许可证。项目只用它复现实验数据，不把
+镜像上传者视为 UCF101 权利人，也不再分发镜像中的原始视频。

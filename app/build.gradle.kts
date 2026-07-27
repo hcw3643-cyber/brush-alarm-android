@@ -74,3 +74,21 @@ dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.27.0")
     testImplementation("junit:junit:4.13.2")
 }
+
+val verifyBrushModel by tasks.registering {
+    group = "verification"
+    description = "Checks that the separately distributed ONNX model is installed."
+    doLast {
+        val model = layout.projectDirectory.file(
+            "src/main/assets/brush_classifier.onnx"
+        ).asFile
+        check(model.isFile) {
+            "Missing ${model.path}. Run scripts/fetch-model.sh (or " +
+                "scripts/fetch-model.ps1 on Windows) before building."
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(verifyBrushModel)
+}

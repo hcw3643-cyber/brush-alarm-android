@@ -43,14 +43,23 @@ UCF101 只用于基础模型。实际发布前必须加入手机前置摄像头�
 ## 运行
 
 ```bash
-/home/dev/.venvs/ai-infra/bin/python training/prepare_ucf101.py
-/home/dev/.venvs/ai-infra/bin/python training/train.py
-/home/dev/.venvs/ai-infra/bin/python training/finetune_feedback.py \
+python -m venv .venv-training
+source .venv-training/bin/activate
+python -m pip install -r training/requirements.txt
+python training/prepare_ucf101.py
+python training/train.py
+python training/finetune_feedback.py \
   --positive-video /path/to/consented-brushing-video.mp4
-/home/dev/.venvs/ai-infra/bin/python training/export_onnx.py
-/home/dev/.venvs/ai-infra/bin/python training/analyze_inference_logs.py /path/to/logs/
+python training/export_onnx.py
+python training/analyze_inference_logs.py /path/to/logs/
 ```
 
 生成的 `training/export/brush_classifier.onnx` 需复制到
 `app/src/main/assets/brush_classifier.onnx`。下载环境如果需要 WSL 宿主机代理，可设置
 `TRAINING_PROXY=http://<WSL默认网关>:7890`；准备脚本默认也会尝试这个地址。
+
+训练数据、视频、日志、检查点和导出模型都被 `.gitignore` 排除，不能提交到仓库。
+正式发布模型时应使用独立 Release 资产并记录 SHA-256。模型来源、指标和限制以
+[`docs/MODEL_CARD.md`](../docs/MODEL_CARD.md) 为准；志愿者视频不得通过公开 Issue
+或 PR 提交，具体原则见
+[`docs/DATA_CONTRIBUTION.md`](../docs/DATA_CONTRIBUTION.md)。

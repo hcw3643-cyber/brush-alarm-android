@@ -126,7 +126,7 @@ def main() -> None:
             f"feedback_above_0.70={local_metrics['above_high']:.4f}",
             flush=True,
         )
-        # Permit a small public-domain tradeoff, but never select a model that
+        # Permit a small public-benchmark tradeoff, but never select a model that
         # fixes one local clip by broadly forgetting the hard negatives.
         if (
             public_metrics["f1"] >= 0.91
