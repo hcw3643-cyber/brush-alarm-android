@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import com.example.brushalarm.BuildConfig
 import java.io.File
 import java.io.FileWriter
 import java.time.Instant
@@ -24,6 +25,7 @@ object AlarmDiagnosticLog {
         alarmId: Long = -1,
         details: String = ""
     ) {
+        if (!BuildConfig.TEST_FEATURES) return
         runCatching {
             val file = deviceFile(context)
             if (file.length() > MAX_BYTES) file.delete()
@@ -38,6 +40,7 @@ object AlarmDiagnosticLog {
     }
 
     fun share(activity: Activity): Boolean {
+        if (!BuildConfig.TEST_FEATURES) return false
         val source = deviceFile(activity)
         if (!source.exists()) return false
         val destinationDirectory = File(activity.filesDir, DIRECTORY).apply { mkdirs() }

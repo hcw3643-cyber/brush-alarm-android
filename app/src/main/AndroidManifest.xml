@@ -21,17 +21,20 @@
         android:name=".BrushAlarmApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="刷牙闹钟"
+        android:label="${appLabel}"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BrushAlarm">
         <activity
             android:name=".ui.VerificationActivity"
             android:directBootAware="true"
+            android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTop"
+            android:lockTaskMode="normal"
             android:screenOrientation="portrait"
             android:showWhenLocked="true"
+            android:taskAffinity="${applicationId}.alarmVerification"
             android:turnScreenOn="true" />
         <activity
             android:name=".MainActivity"

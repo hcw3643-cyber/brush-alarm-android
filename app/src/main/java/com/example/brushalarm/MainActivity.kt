@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,7 +16,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,16 +64,17 @@ class MainActivity : ComponentActivity() {
     private var exactAlarmAllowed by mutableStateOf(true)
     private var batteryUnrestricted by mutableStateOf(true)
     private var fullScreenAlarmAllowed by mutableStateOf(true)
+    private var showPermissionGuide by mutableStateOf(false)
+    private var permissionRevision by mutableIntStateOf(0)
     private val isVivo = Build.MANUFACTURER.equals("vivo", ignoreCase = true)
-    private val notificationPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) {}
+    private val runtimePermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionRevision++ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= 33) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        showPermissionGuide = !getSharedPreferences(ONBOARDING_FILE, MODE_PRIVATE)
+            .getBoolean(ONBOARDING_SEEN, false)
         lifecycleScope.launch {
             (application as BrushAlarmApp).database.alarms().observeAll().collectLatest {
                 alarms.clear(); alarms.addAll(it)
@@ -80,6 +85,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        permissionRevision++
         batteryUnrestricted = Build.VERSION.SDK_INT < 23 ||
             getSystemService(PowerManager::class.java)
                 .isIgnoringBatteryOptimizations(packageName)
@@ -120,6 +126,9 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun AlarmHome() {
+        if (showPermissionGuide) {
+            PermissionGuideDialog()
+        }
         if (showTimeEditor) {
             val now = java.time.LocalTime.now()
             WheelTimePickerDialog(
@@ -143,57 +152,45 @@ class MainActivity : ComponentActivity() {
             }
         ) { padding ->
             Column(Modifier.padding(padding).padding(20.dp)) {
-                Text("刷牙闹钟", fontSize = 32.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("刷牙闹钟", fontSize = 32.sp)
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = { showPermissionGuide = true }) {
+                        Icon(Icons.Default.Settings, "权限与可靠性设置")
+                    }
+                }
                 Text(
                     "起床不是按掉闹钟，是完成刷牙。",
                     color = Color(0xFF58635F),
                     modifier = Modifier.padding(top = 4.dp)
                 )
-                if (!exactAlarmAllowed) {
-                    Card(
-                        colors = CardDefaults.cardColors(Color(0xFFFFE3B3)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp)
-                            .clickable { requestExactAlarmIfNeeded() }
-                    ) {
-                        Text(
-                            "尚未允许“闹钟和提醒”，系统只能近似触发。点此授权，" +
-                                "否则锁屏、待机或清理后台后可能延迟。",
-                            modifier = Modifier.padding(14.dp),
-                            color = Color(0xFF5D4300)
-                        )
-                    }
+                if (BuildConfig.TEST_FEATURES) {
+                    TextButton(
+                        onClick = {
+                            if (!InferenceLogFiles.shareLatest(this@MainActivity)) {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "还没有可导出的推理日志",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("导出最近一次识别日志（测试版）") }
+                    TextButton(
+                        onClick = {
+                            if (!AlarmDiagnosticLog.share(this@MainActivity)) {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "还没有闹钟诊断日志",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) { Text("导出闹钟诊断日志（测试版）") }
                 }
-                if (isVivo || !batteryUnrestricted || !fullScreenAlarmAllowed) {
-                    AlarmReliabilityCard()
-                }
-                TextButton(
-                    onClick = {
-                        if (!InferenceLogFiles.shareLatest(this@MainActivity)) {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "还没有可导出的推理日志",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    },
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.padding(bottom = 12.dp)
-                ) { Text("导出最近一次识别日志") }
-                TextButton(
-                    onClick = {
-                        if (!AlarmDiagnosticLog.share(this@MainActivity)) {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "还没有闹钟诊断日志",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    },
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.padding(bottom = 12.dp)
-                ) { Text("导出闹钟诊断日志") }
                 if (alarms.isEmpty()) {
                     Card(colors = CardDefaults.cardColors(Color.White)) {
                         Text(
@@ -211,55 +208,116 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun AlarmReliabilityCard() {
-        Card(
-            colors = CardDefaults.cardColors(Color(0xFFFFE3B3)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp, bottom = 8.dp)
-        ) {
-            Column(Modifier.padding(14.dp)) {
-                Text(
-                    if (isVivo) "vivo 锁屏可靠性设置" else "锁屏可靠性设置",
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF5D4300)
-                )
-                Text(
-                    if (isVivo) {
-                        "这台手机会把划掉最近任务当成“停止应用”，并撤销系统闹钟。" +
-                            "请在系统设置中为“刷牙闹钟”开启“自启动”，再到“电池→" +
-                            "后台耗电管理”选择“允许后台高耗电”。"
-                    } else {
-                        "允许应用不受电池优化限制，并允许全屏闹钟，避免熄屏时延迟。"
-                    },
-                    modifier = Modifier.padding(top = 6.dp),
-                    color = Color(0xFF5D4300),
-                    fontSize = 13.sp
-                )
-                Row(
-                    modifier = Modifier
+    private fun PermissionGuideDialog() {
+        // Read this state so returning from a system permission page refreshes
+        // all check marks without keeping warnings on the alarm home screen.
+        permissionRevision
+        val runtimeReady =
+            checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
+                (Build.VERSION.SDK_INT < 33 ||
+                    checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED)
+        AlertDialog(
+            onDismissRequest = { finishOnboarding() },
+            title = { Text("完成闹钟可靠性设置") },
+            text = {
+                Column(
+                    Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (!batteryUnrestricted) {
-                        OutlinedButton(
-                            onClick = { requestBatteryUnrestricted() },
-                            contentPadding = PaddingValues(horizontal = 10.dp)
-                        ) { Text("允许后台运行", fontSize = 12.sp) }
-                    }
-                    if (!fullScreenAlarmAllowed) {
-                        OutlinedButton(
-                            onClick = { requestFullScreenAlarm() },
-                            contentPadding = PaddingValues(horizontal = 10.dp)
-                        ) { Text("允许全屏闹钟", fontSize = 12.sp) }
-                    }
+                    Text(
+                        "这些权限只在首次启动集中引导。之后可点首页右上角设置重新打开。",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    PermissionStep(
+                        "相机与通知",
+                        "相机用于本地刷牙识别；通知用于显示正在响铃的前台闹钟。",
+                        runtimeReady,
+                        "授权"
+                    ) { requestRuntimePermissions() }
+                    PermissionStep(
+                        "闹钟和提醒",
+                        "允许系统在熄屏和待机时精确触发。",
+                        exactAlarmAllowed,
+                        "打开"
+                    ) { requestExactAlarmIfNeeded() }
+                    PermissionStep(
+                        "后台不受限",
+                        "避免省电策略冻结闹钟接收和响铃服务。",
+                        batteryUnrestricted,
+                        "允许"
+                    ) { requestBatteryUnrestricted() }
+                    PermissionStep(
+                        "锁屏全屏显示",
+                        "响铃后直接覆盖锁屏进入刷牙验证。",
+                        fullScreenAlarmAllowed,
+                        "打开"
+                    ) { requestFullScreenAlarm() }
                     if (isVivo) {
-                        OutlinedButton(
-                            onClick = { openAppSettings() },
-                            contentPadding = PaddingValues(horizontal = 10.dp)
-                        ) { Text("打开应用设置", fontSize = 12.sp) }
+                        PermissionStep(
+                            "vivo 厂商权限",
+                            "请在应用权限中开启“自启动、后台弹出界面、锁屏显示”，" +
+                                "并在电池设置中选择“允许后台高耗电”。",
+                            null,
+                            "应用设置"
+                        ) { openAppSettings() }
                     }
+                    PermissionStep(
+                        "防止退出验证",
+                        "请在系统安全设置中开启“屏幕固定/固定应用”。闹钟验证时系统会" +
+                            "请求固定屏幕，完成刷牙后自动解除。",
+                        null,
+                        "安全设置"
+                    ) { openSecuritySettings() }
+                    Text(
+                        "普通应用无法禁止系统“强行停止”。屏幕固定可阻止误触 Home 和" +
+                            "最近任务，但用户仍可按系统方式解除。",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { finishOnboarding() }) { Text("稍后") }
+            },
+            confirmButton = {
+                Button(onClick = { finishOnboarding() }) { Text("完成") }
+            }
+        )
+    }
+
+    @Composable
+    private fun PermissionStep(
+        title: String,
+        description: String,
+        granted: Boolean?,
+        actionLabel: String,
+        onClick: () -> Unit
+    ) {
+        Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)) {
+            Row(
+                Modifier.fillMaxWidth().padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "$title${when (granted) {
+                            true -> " ✓"
+                            false -> "（未开启）"
+                            null -> ""
+                        }}",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        description,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (granted != true) {
+                    TextButton(onClick = onClick) { Text(actionLabel) }
                 }
             }
         }
@@ -418,6 +476,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestRuntimePermissions() {
+        val permissions = buildList {
+            add(Manifest.permission.CAMERA)
+            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        runtimePermissions.launch(permissions.toTypedArray())
+    }
+
     private fun requestBatteryUnrestricted() {
         if (Build.VERSION.SDK_INT >= 23) {
             runCatching {
@@ -446,9 +512,26 @@ class MainActivity : ComponentActivity() {
         })
     }
 
+    private fun openSecuritySettings() {
+        startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS))
+    }
+
+    private fun finishOnboarding() {
+        getSharedPreferences(ONBOARDING_FILE, MODE_PRIVATE)
+            .edit()
+            .putBoolean(ONBOARDING_SEEN, true)
+            .apply()
+        showPermissionGuide = false
+    }
+
     private fun formatTriggerTime(epochMillis: Long): String {
         return DateTimeFormatter.ofPattern("M月d日 E HH:mm")
             .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+    }
+
+    companion object {
+        private const val ONBOARDING_FILE = "onboarding"
+        private const val ONBOARDING_SEEN = "permission_guide_seen"
     }
 }
 

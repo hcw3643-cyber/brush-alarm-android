@@ -1,7 +1,9 @@
 package com.example.brushalarm.ui
 
 import android.Manifest
+import android.app.ActivityManager
 import android.app.ActivityOptions
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -56,6 +58,7 @@ class VerificationActivity : ComponentActivity() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var analyzer: BrushMotionAnalyzer? = null
     private var verificationFinished = false
+    private var lockTaskRequested = false
     private var groundTruthLabel by mutableStateOf("未标记")
     private var groundTruth: Boolean? = null
 
@@ -110,6 +113,16 @@ class VerificationActivity : ComponentActivity() {
         )
     }
 
+    override fun onResume() {
+        super.onResume()
+        enterScreenPinningIfPossible()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) enterScreenPinningIfPossible()
+    }
+
     @Composable
     private fun VerificationScreen() {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -145,7 +158,7 @@ class VerificationActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                             ) { Text("先安静 1 分钟") }
                         }
-                        if (BuildConfig.DEBUG) {
+                        if (BuildConfig.TEST_FEATURES) {
                             Text(
                                 "测试标签：$groundTruthLabel",
                                 color = Color.White.copy(alpha = .75f),
@@ -242,10 +255,51 @@ class VerificationActivity : ComponentActivity() {
     private fun verified() {
         if (verificationFinished) return
         verificationFinished = true
+        exitScreenPinning()
         startService(Intent(this, AlarmService::class.java).setAction(AlarmService.ACTION_VERIFIED))
         hint = "验证通过，早上好！"
         cameraProvider?.unbindAll()
         window.decorView.postDelayed({ finishAndRemoveTask() }, 900)
+    }
+
+    private fun enterScreenPinningIfPossible() {
+        if (lockTaskRequested || verificationFinished) return
+        if (AlarmService.activeAlarmId(this) < 0) return
+        if (getSystemService(KeyguardManager::class.java).isKeyguardLocked) return
+        val activityManager = getSystemService(ActivityManager::class.java)
+        if (activityManager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE) {
+            lockTaskRequested = true
+            AlarmDiagnosticLog.record(
+                this,
+                event = "screen_pinning_already_active",
+                alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
+                details = "state=${activityManager.lockTaskModeState}"
+            )
+            return
+        }
+        lockTaskRequested = true
+        runCatching { startLockTask() }
+            .onSuccess {
+                AlarmDiagnosticLog.record(
+                    this,
+                    event = "screen_pinning_requested",
+                    alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
+                )
+            }
+            .onFailure {
+                AlarmDiagnosticLog.record(
+                    this,
+                    event = "screen_pinning_failed",
+                    alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
+                    details = it.javaClass.simpleName
+                )
+            }
+    }
+
+    private fun exitScreenPinning() {
+        val activityManager = getSystemService(ActivityManager::class.java)
+        if (activityManager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE) return
+        runCatching { stopLockTask() }
     }
 
     @Deprecated("Back is disabled while the alarm is active")
