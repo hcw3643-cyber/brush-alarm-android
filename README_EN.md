@@ -60,27 +60,37 @@ detects that the user is brushing their teeth.
 - See [docs/en/COMPATIBILITY.md](docs/en/COMPATIBILITY.md) for the current compatibility
   scope and test method.
 
-## Download and install
+## Download the app
 
-Users who only want the app do not need to download the model or build from
-source:
+Download the installer from the
+[`v1.0.0` release page](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.0).
 
-1. Open the [`v1.0.0` Release](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.0).
-2. On most recent Android phones, download
-   `BrushAlarm-v1.0.0-arm64-v8a.apk`.
-3. If the CPU architecture is unknown or the arm64 package cannot be installed,
-   use `BrushAlarm-v1.0.0-universal.apk`.
-4. Allow installation from the current source when Android asks, then follow
-   the first-launch guide for notifications, exact alarms, camera access, and
-   required vendor background settings.
-5. Set an alarm a few minutes ahead and confirm that it rings while locked and
-   after dismissing the recent-task card before relying on it the next morning.
+### Choose an APK
 
-The Release APK already embeds the brushing model. Ordinary users should not
-install Debug, unsigned, x86, or 32-bit ARM internal builds and do not need the
-ONNX file from the separate `model-v1.0.0` Release. The Release also provides
-`BrushAlarm-v1.0.0-SHA256SUMS.txt`. Because cross-device adaptation is
-incomplete, always keep a system alarm as a backup.
+- **Recommended:** `BrushAlarm-v1.0.0-arm64-v8a.apk`
+  Suitable for most recent Android phones and smaller in size.
+- **Compatibility version:** `BrushAlarm-v1.0.0-universal.apk`
+  Use this version if the recommended APK cannot be installed or you are unsure
+  whether your device is compatible.
+
+### Installation and first use
+
+1. Download the APK and allow installation from the current source when Android
+   asks.
+2. Open the app and follow the first-launch guide to grant notification, camera,
+   and exact-alarm permissions.
+3. Follow the in-app settings guide to allow autostart, background operation,
+   and lock-screen display.
+4. Set an alarm a few minutes ahead and test it while the phone is locked and
+   after the app has been dismissed from recent tasks.
+
+The brushing-recognition model is already included in the APK. No separate model
+download is required.
+
+End-to-end testing has currently been completed only on a vivo X300 running
+Android 16 / OriginOS 6. Background restrictions vary between Android vendors.
+Keep a system alarm as a backup until you have confirmed reliable operation on
+your device.
 
 ## Build from source
 
