@@ -37,7 +37,8 @@ Video is accepted only through
 email body. Transport and mailbox storage use the 163.com email provider. The
 public repository, Issues, pull requests, and model Releases are not acceptable
 raw-video channels. The app never collects or uploads volunteer video
-automatically, and original video is retained for at most 12 months by default.
+automatically. No fixed maximum retention period is promised; deletion and
+withdrawal are described in the data contribution notice.
 
 See [`DATA_CONTRIBUTION.md`](DATA_CONTRIBUTION.md) and the copyable
 [`DATA_CONTRIBUTION_EMAIL_TEMPLATE.md`](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md).

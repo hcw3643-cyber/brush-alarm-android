@@ -32,7 +32,7 @@ Debug 测试包的应用名和包名与正式版区分，并可保存：
 视频征集只通过 [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收，并要求邮件
 正文包含明确授权确认。邮件传输和存储会经过 163.com 邮件服务商；公开仓库、Issue、
 PR 和模型 Release 都不是可接受的原始视频传输位置。原始视频不会由 App 自动采集或
-上传，默认最长保存 12 个月。
+上传。当前不承诺固定的最长保存期限；删除和撤回规则见数据贡献说明。
 
 详见 [`DATA_CONTRIBUTION.md`](DATA_CONTRIBUTION.md) 和可复制的
 [`DATA_CONTRIBUTION_EMAIL_TEMPLATE.md`](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md)。

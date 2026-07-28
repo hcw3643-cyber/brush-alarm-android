@@ -50,8 +50,9 @@ template is available in
   transmission and electronic storage cannot guarantee zero security incidents.
 - All data from one contributor stays in exactly one of train, validation, or
   test, preventing identity leakage across evaluation splits.
-- Original video is retained for at most 12 months by default and then deleted.
-  Continued retention requires renewed confirmation from the contributor.
+- No fixed maximum retention period is promised. The maintainer deletes original
+  video when it is no longer needed for model training, validation, and necessary
+  review. Until then, the contributor may request deletion as described below.
 
 ## Withdrawal
 
