@@ -9,7 +9,7 @@ whether a short window contains a brushing action. It does not perform face or
 identity recognition, dental diagnosis, or medical assessment.
 
 - File: `brush_classifier.onnx`
-- Release tag: `model-v1.0.0`
+- Release tag: `model-v1.0.1`
 - SHA-256: `505ab603651c0cd04aa06fafaef773b6a97f57a210308fdfa4752407af0e8eb5`
 - Size: 31,650,265 bytes
 - Runtime: ONNX Runtime Mobile/Android, executed on device

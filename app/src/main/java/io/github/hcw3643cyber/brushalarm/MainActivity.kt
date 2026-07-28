@@ -13,7 +13,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,7 +49,6 @@ import io.github.hcw3643cyber.brushalarm.alarm.AlarmDiagnosticLog
 import io.github.hcw3643cyber.brushalarm.data.AlarmEntity
 import io.github.hcw3643cyber.brushalarm.data.AlarmMode
 import io.github.hcw3643cyber.brushalarm.ui.VerificationActivity
-import io.github.hcw3643cyber.brushalarm.verification.InferenceLogFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -167,33 +165,7 @@ class MainActivity : ComponentActivity() {
                     color = Color(0xFF58635F),
                     modifier = Modifier.padding(top = 4.dp)
                 )
-                if (BuildConfig.TEST_FEATURES) {
-                    TextButton(
-                        onClick = {
-                            if (!InferenceLogFiles.shareLatest(this@MainActivity)) {
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "还没有可导出的推理日志",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        },
-                        contentPadding = PaddingValues(0.dp)
-                    ) { Text("导出最近一次识别日志（测试版）") }
-                    TextButton(
-                        onClick = {
-                            if (!AlarmDiagnosticLog.share(this@MainActivity)) {
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "还没有闹钟诊断日志",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        },
-                        contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    ) { Text("导出闹钟诊断日志（测试版）") }
-                }
+                TestHomeControls(this@MainActivity)
                 if (alarms.isEmpty()) {
                     Card(colors = CardDefaults.cardColors(Color.White)) {
                         Text(

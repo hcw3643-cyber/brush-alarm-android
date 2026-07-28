@@ -2,6 +2,8 @@
 
 [English](CONTRIBUTING_EN.md) | 简体中文
 
+参与即表示同意遵守 [社区行为准则](CODE_OF_CONDUCT.md)。
+
 感谢你帮助改进刷牙闹钟。除非另行书面说明，提交代码或文档贡献即表示你有权提交该
 内容，并同意它按仓库根目录 [LICENSE](LICENSE) 中的 GNU GPL v3.0 only
 （SPDX：`GPL-3.0-only`）提供。模型、训练数据和志愿者视频不适用这一默认条款，

@@ -124,7 +124,7 @@ On Windows PowerShell:
 .\scripts\fetch-model.ps1
 ```
 
-It can also be downloaded manually from the `model-v1.0.0` Release. See
+It can also be downloaded manually from the `model-v1.0.1` Release. See
 [docs/en/MODEL_CARD.md](docs/en/MODEL_CARD.md) for provenance, input format, metrics,
 and limitations.
 
@@ -139,6 +139,15 @@ and limitations.
   and manual labels.
 - `release`: production package with no inference/alarm CSV generation and no
   log-export UI.
+
+The build uses the official Google, Maven Central, and Gradle repositories by
+default. If those services are inaccessible from your network, enable the
+project's optional mainland-China mirrors only in your local
+`~/.gradle/gradle.properties` (do not commit that machine-local setting):
+
+```properties
+brushAlarm.useChinaMirrors=true
+```
 
 ## Current recognition model
 
@@ -176,6 +185,7 @@ phone-domain validation and has not replaced the production model. See
   [BrushAlarm@163.com](mailto:BrushAlarm@163.com). Read the data contribution
   notice and include its explicit confirmation before sending anything.
 - Code contribution rules: [CONTRIBUTING_EN.md](CONTRIBUTING_EN.md)
+- Community participation: [CODE_OF_CONDUCT_EN.md](CODE_OF_CONDUCT_EN.md)
 - Data contribution principles:
   [docs/en/DATA_CONTRIBUTION.md](docs/en/DATA_CONTRIBUTION.md)
 

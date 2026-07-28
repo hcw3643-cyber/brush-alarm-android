@@ -16,8 +16,8 @@ android {
         applicationId = "io.github.hcw3643cyber.brushalarm"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.0.0"
+        versionCode = 8
+        versionName = "1.0.1"
     }
 
     buildFeatures {
@@ -29,12 +29,10 @@ android {
         getByName("debug") {
             applicationIdSuffix = ".test"
             versionNameSuffix = "-test"
-            buildConfigField("boolean", "TEST_FEATURES", "true")
             manifestPlaceholders["appLabel"] = "刷牙闹钟 测试版"
         }
         getByName("release") {
             isMinifyEnabled = false
-            buildConfigField("boolean", "TEST_FEATURES", "false")
             manifestPlaceholders["appLabel"] = "刷牙闹钟"
         }
     }

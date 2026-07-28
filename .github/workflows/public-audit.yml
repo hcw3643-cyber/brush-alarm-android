@@ -10,12 +10,34 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Download the pinned model release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p app/src/main/assets
+          gh release download model-v1.0.1 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern brush_classifier.onnx \
+            --dir app/src/main/assets \
+            --clobber
       - name: Check tracked files, secrets, and local paths
         run: bash scripts/audit-public-tree.sh
       - name: Test training configuration
         run: python -m unittest training.tests.test_config -v
+      - name: Test, lint, and assemble Android variants
+        run: |
+          ./gradlew --no-daemon \
+            testDebugUnitTest testReleaseUnitTest \
+            lintDebug lintRelease \
+            assembleDebug assembleRelease

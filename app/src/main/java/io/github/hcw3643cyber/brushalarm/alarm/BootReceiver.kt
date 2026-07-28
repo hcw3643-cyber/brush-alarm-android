@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action !in SUPPORTED_ACTIONS) return
         if (intent.action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
             AlarmService.clearActiveAlarmState(context)
         }
@@ -41,5 +42,17 @@ class BootReceiver : BroadcastReceiver() {
                 }
             } finally { result.finish() }
         }
+    }
+
+    private companion object {
+        val SUPPORTED_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_LOCKED_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            Intent.ACTION_DATE_CHANGED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
+        )
     }
 }

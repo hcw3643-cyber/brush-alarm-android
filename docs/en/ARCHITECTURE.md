@@ -51,15 +51,21 @@ after six seconds of accumulated high-confidence evidence.
 
 ## Data and privacy
 
-Room stores alarm settings locally. Production builds save no camera frames,
-generate no inference/alarm CSV files, and contain no upload service. Test builds
-may generate numerical diagnostics and manual labels. Debug and Release use
-different application IDs and do not share data.
+Room stores alarm settings locally and explicitly excludes them from Android
+cloud backup and device-to-device transfer. Production builds save no camera
+frames, generate no inference/alarm CSV files, and contain no log-sharing
+`FileProvider`. The real log writers, manual labels, and sharing component exist
+only in `app/src/debug/`; the Release source set provides non-persistent
+implementations with the same interfaces. Debug and Release use different
+application IDs and do not share data.
 
 ## Key directories
 
-- `app/src/main/`: production runtime code and shared resources
-- `app/src/debug/`, `app/src/release/`: build-type-specific behavior
+- `app/src/main/`: runtime code and resources shared by both build types
+- `app/src/debug/`: test logging, manual labels, export UI, and test-only
+  `FileProvider`
+- `app/src/release/`: production implementations that retain the same
+  interfaces but do not write or expose logs
 - `app/src/test/`: local unit tests
 - `training/`: data preparation, training, log analysis, and ONNX export
 - `docs/`: public architecture, compatibility, model, privacy, and data policy

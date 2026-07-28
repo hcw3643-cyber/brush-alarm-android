@@ -1,5 +1,5 @@
-name: 设备兼容性报告
-description: 报告某款 Android 设备的闹钟触发结果
+name: 设备兼容性报告 / Compatibility report
+description: 报告某款 Android 设备的闹钟触发结果 / Report alarm behavior on an Android device
 title: "[兼容性] "
 labels:
   - compatibility
@@ -7,44 +7,44 @@ body:
   - type: input
     id: device
     attributes:
-      label: 手机品牌与完整型号
+      label: 手机品牌与完整型号 / Brand and exact model
     validations:
       required: true
   - type: input
     id: os
     attributes:
-      label: Android 与厂商系统版本
+      label: Android 与厂商系统版本 / Android and vendor OS
     validations:
       required: true
   - type: dropdown
     id: state
     attributes:
-      label: 触发前状态
+      label: 触发前状态 / State before trigger
       options:
-        - 前台
-        - 后台
-        - 已从最近任务划掉
-        - 熄屏锁屏
-        - 重启后未打开 App
+        - 前台 / Foreground
+        - 后台 / Background
+        - 已从最近任务划掉 / Dismissed from recents
+        - 熄屏锁屏 / Screen off and locked
+        - 重启后未打开 App / Not opened after reboot
     validations:
       required: true
   - type: textarea
     id: permissions
     attributes:
-      label: 已允许的相关权限
-      description: 精确闹钟、通知、摄像头、自启动、后台弹出、锁屏显示和后台耗电等。
+      label: 已允许的相关权限 / Granted permissions
+      description: 精确闹钟、通知、摄像头、自启动、后台弹出、锁屏显示和后台耗电等。 / Exact alarm, notifications, camera, autostart, background launch, lock-screen display, and battery settings.
     validations:
       required: true
   - type: textarea
     id: result
     attributes:
-      label: 结果与复现步骤
+      label: 结果与复现步骤 / Result and reproduction steps
     validations:
       required: true
   - type: checkboxes
     id: privacy
     attributes:
-      label: 隐私确认
+      label: 隐私确认 / Privacy confirmation
       options:
-        - label: 我没有公开上传视频、个人信息、设备标识或未脱敏日志。
+        - label: 我没有公开上传视频、个人信息、设备标识或未脱敏日志。 / I publicly uploaded no video, personal data, device identifiers, or unredacted logs.
           required: true

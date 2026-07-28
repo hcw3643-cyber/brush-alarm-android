@@ -30,7 +30,9 @@
 
     <application
         android:name=".BrushAlarmApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="${appLabel}"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -80,14 +82,5 @@
             android:exported="false"
             android:stopWithTask="false"
             android:foregroundServiceType="mediaPlayback" />
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.files"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
 </manifest>

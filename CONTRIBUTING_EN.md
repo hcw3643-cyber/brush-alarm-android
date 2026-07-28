@@ -2,6 +2,9 @@
 
 English | [简体中文](CONTRIBUTING.md)
 
+Participation is subject to the
+[Community Code of Conduct](CODE_OF_CONDUCT_EN.md).
+
 Thank you for helping improve Brush Alarm. Unless agreed otherwise in writing,
 submitting code or documentation means that you have the right to contribute it
 and agree to provide it under GNU GPL v3.0 only (`GPL-3.0-only`) in the root

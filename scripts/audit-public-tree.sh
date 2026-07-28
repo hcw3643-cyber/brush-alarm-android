@@ -30,6 +30,63 @@ if [[ -n "$local_path_hits" ]]; then
     exit 1
 fi
 
+model_sha256="505ab603651c0cd04aa06fafaef773b6a97f57a210308fdfa4752407af0e8eb5"
+model_tag="model-v1.0.1"
+for metadata_file in \
+    scripts/fetch-model.sh \
+    scripts/fetch-model.ps1 \
+    docs/MODEL_CARD.md \
+    docs/en/MODEL_CARD.md; do
+    if ! grep -Fq "$model_sha256" "$metadata_file"; then
+        echo "Current model SHA-256 is missing from ${metadata_file}" >&2
+        exit 1
+    fi
+done
+for metadata_file in \
+    scripts/fetch-model.sh \
+    scripts/fetch-model.ps1 \
+    docs/MODEL_CARD.md \
+    docs/en/MODEL_CARD.md; do
+    if ! grep -Fq "$model_tag" "$metadata_file"; then
+        echo "Current model tag is missing from ${metadata_file}" >&2
+        exit 1
+    fi
+done
+
+model_path="app/src/main/assets/brush_classifier.onnx"
+if [[ -f "$model_path" ]]; then
+    actual_model_sha256="$(sha256sum "$model_path" | awk '{print $1}')"
+    if [[ "$actual_model_sha256" != "$model_sha256" ]]; then
+        echo "Installed model checksum does not match public metadata." >&2
+        exit 1
+    fi
+fi
+
+declare -a mirrored_license_pairs=(
+    "LICENSE|app/src/main/assets/licenses/BrushAlarm-GPL-3.0-only.txt"
+    "MODEL_LICENSE.md|app/src/main/assets/licenses/BrushAlarm-Model-License.md"
+    "MODEL_LICENSE_EN.md|app/src/main/assets/licenses/BrushAlarm-Model-License-EN.md"
+    "THIRD_PARTY_NOTICES.md|app/src/main/assets/licenses/BrushAlarm-Third-Party-Notices.md"
+    "THIRD_PARTY_NOTICES_EN.md|app/src/main/assets/licenses/BrushAlarm-Third-Party-Notices-EN.md"
+)
+for pair in "${mirrored_license_pairs[@]}"; do
+    source_file="${pair%%|*}"
+    packaged_file="${pair#*|}"
+    if ! cmp -s "$source_file" "$packaged_file"; then
+        echo "Packaged license copy is stale: ${packaged_file}" >&2
+        exit 1
+    fi
+done
+
+if git grep -n -F "BuildConfig.TEST_FEATURES" -- app/src >/dev/null; then
+    echo "Legacy runtime-gated test feature code remains in app/src." >&2
+    exit 1
+fi
+if git grep -n -E 'FileProvider|file_paths' -- app/src/main app/src/release >/dev/null; then
+    echo "Release/shared sources still expose the debug log FileProvider." >&2
+    exit 1
+fi
+
 for artifact in "$@"; do
     if [[ ! -f "$artifact" ]]; then
         echo "Artifact does not exist: $artifact" >&2

@@ -102,7 +102,7 @@ Windows PowerShell：
 .\scripts\fetch-model.ps1
 ```
 
-可以从 `model-v1.0.0` Release 手工下载。模型来源、输入格式、指标和限制见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)。
+可以从 `model-v1.0.1` Release 手工下载。模型来源、输入格式、指标和限制见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)。
 
 ### 3. 构建
 
@@ -113,6 +113,14 @@ Windows PowerShell：
 
 - `debug`：独立测试包，版本名带 `-test`，包含数值日志和人工标签。
 - `release`：正式功能包，不创建推理/闹钟诊断 CSV，也不显示导出入口。
+
+默认使用 Google、Maven Central 和 Gradle 官方仓库。网络受限时，可以只在自己的
+`~/.gradle/gradle.properties` 中加入以下配置启用项目内预设的国内镜像，不要提交该
+本机配置：
+
+```properties
+brushAlarm.useChinaMirrors=true
+```
 ## 识别模型概要
 
 输入为最近约两秒的动作窗口：
@@ -143,6 +151,7 @@ MoViNet A0 已完成相同 UCF 划分上的训练、流式 TFLite 导出和数�
   [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收；发送前必须阅读并在邮件中
   明确接受数据贡献说明。
 - 代码贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 社区交流遵循 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 - 数据贡献原则见
   [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)。
 

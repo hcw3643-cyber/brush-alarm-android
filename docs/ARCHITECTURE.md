@@ -43,14 +43,16 @@ logit，App 使用 sigmoid 转为 0 到 1 的分数。
 
 ## 数据与隐私
 
-闹钟配置使用 Room 保存在设备本地。正式版不保存摄像头帧、不生成模型或闹钟 CSV，
-也没有上传服务；测试版可生成数值诊断日志和人工标签。Debug 和 Release 使用不同
-包名后缀，数据互不共享。
+闹钟配置使用 Room 保存在设备本地，并明确排除 Android 云备份和设备间迁移。正式版
+不保存摄像头帧、不生成模型或闹钟 CSV，也没有日志分享 `FileProvider`；测试版可生成
+数值诊断日志和人工标签。真实日志实现和分享组件只位于 `app/src/debug/`，Release
+源码集只提供无写盘实现。Debug 和 Release 使用不同包名后缀，数据互不共享。
 
 ## 关键目录
 
-- `app/src/main/`：正式运行代码与公共资源；
-- `app/src/debug/`、`app/src/release/`：构建类型专用配置；
+- `app/src/main/`：两个构建类型共享的运行代码与资源；
+- `app/src/debug/`：测试日志、人工标签、日志分享入口和测试版专用 `FileProvider`；
+- `app/src/release/`：与 Debug 接口一致但不写日志、不暴露导出入口的正式版实现；
 - `app/src/test/`：本地单元测试；
 - `training/`：数据准备、训练、日志分析和 ONNX 导出；
 - `docs/`：对外架构、兼容性、模型、隐私和数据政策；

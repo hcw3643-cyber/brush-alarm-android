@@ -11,9 +11,9 @@ $repository = if ($env:BRUSH_ALARM_REPOSITORY) {
 $tag = if ($env:BRUSH_ALARM_MODEL_TAG) {
     $env:BRUSH_ALARM_MODEL_TAG
 } else {
-    "model-v1.0.0"
+    "model-v1.0.1"
 }
-$expectedSha256 = "60142360e01f211a81d80a70c6aa92ea132044c054496472eb5bf7201283b9eb"
+$expectedSha256 = "505ab603651c0cd04aa06fafaef773b6a97f57a210308fdfa4752407af0e8eb5"
 $target = "app/src/main/assets/brush_classifier.onnx"
 $temporary = "$target.download"
 $url = "https://github.com/$repository/releases/download/$tag/brush_classifier.onnx"

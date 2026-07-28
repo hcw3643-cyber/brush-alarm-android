@@ -11,11 +11,13 @@ The current production build:
 - Uploads no camera frames, alarm settings, or model outputs
 - Contains no advertising, accounts, analytics SDK, or third-party tracking
 - Stores alarm configuration only in the local Room database
+- Disables Android cloud backup and device-to-device transfer for app data
 - Creates and exports no model-inference or alarm-event CSV files
 
-Uninstalling the app or clearing app data removes local alarm settings. The model
-is installed with the app and currently executes through the ONNX Runtime CPU
-backend; no cloud vision service is called.
+Uninstalling the app, clearing app data, or reinstalling on another device
+removes or resets local alarm settings; alarms must then be created again. The
+model is installed with the app and currently executes through the ONNX Runtime
+CPU backend; no cloud vision service is called.
 
 ## Test build
 

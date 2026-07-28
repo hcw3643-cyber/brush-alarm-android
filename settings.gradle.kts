@@ -2,10 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 pluginManagement {
+    val useChinaMirrors =
+        providers.gradleProperty("brushAlarm.useChinaMirrors").orNull.toBoolean()
     repositories {
-        maven("https://repo.huaweicloud.com/repository/maven")
-        maven("https://maven.aliyun.com/repository/google")
-        maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public")
+        if (useChinaMirrors) {
+            maven("https://repo.huaweicloud.com/repository/maven")
+            maven("https://maven.aliyun.com/repository/google")
+            maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public")
+        }
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -13,11 +17,15 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    val useChinaMirrors =
+        providers.gradleProperty("brushAlarm.useChinaMirrors").orNull.toBoolean()
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        maven("https://repo.huaweicloud.com/repository/maven")
-        maven("https://maven.aliyun.com/repository/google")
-        maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public")
+        if (useChinaMirrors) {
+            maven("https://repo.huaweicloud.com/repository/maven")
+            maven("https://maven.aliyun.com/repository/google")
+            maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public")
+        }
         google()
         mavenCentral()
     }

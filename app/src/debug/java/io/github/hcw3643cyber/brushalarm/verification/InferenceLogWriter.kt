@@ -22,11 +22,7 @@ import java.util.UUID
  */
 internal class InferenceLogWriter(context: Context) : AutoCloseable {
     private val startedAtNs = System.nanoTime()
-    private val writer: BufferedWriter? = if (BuildConfig.TEST_FEATURES) {
-        BufferedWriter(FileWriter(InferenceLogFiles.newSessionFile(context)))
-    } else {
-        null
-    }
+    private val writer = BufferedWriter(FileWriter(InferenceLogFiles.newSessionFile(context)))
     private val metadataPrefix = listOf(
         SCHEMA_VERSION,
         MODEL_ID,
@@ -50,7 +46,6 @@ internal class InferenceLogWriter(context: Context) : AutoCloseable {
 
     @Synchronized
     fun markGroundTruth(brushing: Boolean) {
-        if (!BuildConfig.TEST_FEATURES) return
         groundTruth = if (brushing) "brushing" else "not_brushing"
         writeEvent("ground_truth_changed")
     }
@@ -65,8 +60,7 @@ internal class InferenceLogWriter(context: Context) : AutoCloseable {
         decision: String,
         progress: Float
     ) {
-        val output = writer ?: return
-        output.appendLine(
+        writer.appendLine(
             "$metadataPrefix," + String.format(
                 Locale.US,
                 "%d,inference,%s,%.3f,%.3f,%.3f,%.6f,%.6f,%s,%.6f,%.3f,%.3f,%.0f",
@@ -77,26 +71,25 @@ internal class InferenceLogWriter(context: Context) : AutoCloseable {
                 BrushDecisionFilter.REQUIRED_BRUSHING_MS
             )
         )
-        output.flush()
+        writer.flush()
     }
 
     @Synchronized
     private fun writeEvent(event: String) {
-        val output = writer ?: return
-        output.appendLine(
+        writer.appendLine(
             "$metadataPrefix,${elapsedMs()},$event,$groundTruth,,,,,,,," +
                 "${BrushDecisionFilter.HIGH_THRESHOLD}," +
                 "${BrushDecisionFilter.LOW_THRESHOLD}," +
                 BrushDecisionFilter.REQUIRED_BRUSHING_MS
         )
-        output.flush()
+        writer.flush()
     }
 
     private fun elapsedMs(): Long = (System.nanoTime() - startedAtNs) / 1_000_000L
 
     @Synchronized
     override fun close() {
-        writer?.close()
+        writer.close()
     }
 
     private companion object {
@@ -130,7 +123,6 @@ internal object InferenceLogFiles {
     }
 
     fun shareLatest(activity: Activity): Boolean {
-        if (!BuildConfig.TEST_FEATURES) return false
         migrateDirectBootLogs(activity)
         val latest = File(activity.filesDir, DIRECTORY)
             .listFiles()

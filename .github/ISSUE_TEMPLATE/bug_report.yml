@@ -1,5 +1,5 @@
-name: Bug 报告
-description: 报告可以稳定复现的 App 功能问题
+name: Bug 报告 / Bug report
+description: 报告可复现的 App 功能问题 / Report a reproducible app issue
 title: "[Bug] "
 labels:
   - bug
@@ -8,43 +8,44 @@ body:
     attributes:
       value: |
         请勿上传刷牙视频、浴室画面、未脱敏日志或个人信息。
+        Do not upload brushing video, bathroom footage, unredacted logs, or personal data.
   - type: input
     id: app_version
     attributes:
-      label: App 版本
-      placeholder: 例如 1.0.0 release
+      label: App 版本 / App version
+      placeholder: 例如 / e.g. 1.0.1 release
     validations:
       required: true
   - type: input
     id: device
     attributes:
-      label: 设备与系统
-      placeholder: 品牌、完整型号、Android 与厂商系统版本
+      label: 设备与系统 / Device and OS
+      placeholder: 品牌、完整型号、Android 与厂商系统版本 / Brand, exact model, Android and vendor OS
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: 复现步骤
-      placeholder: 请按时间顺序列出操作
+      label: 复现步骤 / Steps to reproduce
+      placeholder: 请按时间顺序列出操作 / List actions in chronological order
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: 预期行为
+      label: 预期行为 / Expected behavior
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
-      label: 实际行为
+      label: 实际行为 / Actual behavior
     validations:
       required: true
   - type: checkboxes
     id: privacy
     attributes:
-      label: 隐私确认
+      label: 隐私确认 / Privacy confirmation
       options:
-        - label: 我没有附加刷牙视频、浴室画面、个人信息或未脱敏日志。
+        - label: 我没有附加刷牙视频、浴室画面、个人信息或未脱敏日志。 / I attached no brushing video, bathroom footage, personal data, or unredacted logs.
           required: true

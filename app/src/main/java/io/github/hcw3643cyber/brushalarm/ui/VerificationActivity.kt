@@ -40,7 +40,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import io.github.hcw3643cyber.brushalarm.BrushAlarmApp
-import io.github.hcw3643cyber.brushalarm.BuildConfig
 import io.github.hcw3643cyber.brushalarm.alarm.AlarmReceiver
 import io.github.hcw3643cyber.brushalarm.alarm.AlarmDiagnosticLog
 import io.github.hcw3643cyber.brushalarm.alarm.AlarmService
@@ -162,26 +161,11 @@ class VerificationActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                             ) { Text("先安静 1 分钟") }
                         }
-                        if (BuildConfig.TEST_FEATURES) {
-                            Text(
-                                "测试标签：$groundTruthLabel",
-                                color = Color.White.copy(alpha = .75f),
-                                modifier = Modifier.padding(top = 12.dp)
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = { markGroundTruth(true) },
-                                    modifier = Modifier.weight(1f)
-                                ) { Text("标记开始刷牙") }
-                                OutlinedButton(
-                                    onClick = { markGroundTruth(false) },
-                                    modifier = Modifier.weight(1f)
-                                ) { Text("标记已停止") }
-                            }
-                        }
+                        TestVerificationControls(
+                            label = groundTruthLabel,
+                            onBrushing = { markGroundTruth(true) },
+                            onStopped = { markGroundTruth(false) }
+                        )
                     }
                 }
             }

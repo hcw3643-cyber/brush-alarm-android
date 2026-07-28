@@ -8,7 +8,7 @@
 不做人脸识别、身份识别、牙齿健康诊断或医疗评估。
 
 - 文件：`brush_classifier.onnx`
-- 发布标签：`model-v1.0.0`
+- 发布标签：`model-v1.0.1`
 - SHA-256：`505ab603651c0cd04aa06fafaef773b6a97f57a210308fdfa4752407af0e8eb5`
 - 大小：31,650,265 字节
 - 运行时：ONNX Runtime Mobile/Android，在手机端执行
