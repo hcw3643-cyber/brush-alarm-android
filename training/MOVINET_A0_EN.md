@@ -7,15 +7,17 @@ English | [简体中文](MOVINET_A0.md)
 MoViNet A0 has completed binary-head training and full sliding-window validation
 on the same UCF group split as S3D. Its video-level F1 is **93.67%**, close to
 production S3D's 93.83%. With 2.539 million parameters and a native streaming
-TFLite artifact of about 10.2 MB, it is a strong next-generation candidate.
+TFLite artifact of about 10.2 MB, it is worth continued phone-domain
+adaptation as a next-generation model.
 
 It **has not replaced S3D and is not integrated into the app** because:
 
 - Only the binary head is trained; the Kinetics-600 backbone remains frozen.
-- UCF action video does not represent front-camera bathroom conditions.
+- UCF action video does not represent phone front cameras, bathroom lighting,
+  or real users.
 - At the app's 0.65 threshold, precision is 100% but recall is only 85.37%.
-- No contributor-isolated multi-user test or vivo X300 thermal/power benchmark
-  exists.
+- No contributor-isolated multi-user test or vivo X300 latency, thermal, and
+  power benchmark exists.
 - The app currently uses ONNX Runtime; A0 requires LiteRT and lifecycle
   management for 43 state tensors.
 
@@ -100,7 +102,7 @@ are correlated and must not be presented as 2,554 independent examples.
 The training graph consumes a whole clip while deployment carries explicit
 state frame by frame. They are not the same execution graph, so conversion
 parity correctly compares streaming TensorFlow with TFLite. Training-vs-stream
-drift is recorded separately.
+drift is recorded separately, but cannot replace converter-parity validation.
 
 The converter estimates about 50.67 MMAC per frame, or 0.405 GMAC/s at 8 fps.
 The overlapping S3D path is about 26.4 GMAC/s, roughly 65× more multiply-adds.
@@ -124,6 +126,7 @@ traffic and cannot replace an Android power benchmark.
 - [Official TensorFlow transfer-learning tutorial](https://www.tensorflow.org/tutorials/video/transfer_learning_with_movinet)
 - [TensorFlow Model Garden implementation](https://github.com/tensorflow/models/tree/master/official/projects/movinet)
 
-Model Garden source uses Apache-2.0. Official weights retain the Kinetics-600
-training-data boundary. No checkpoint, TFLite artifact, or source video is
-committed or released.
+TensorFlow Model Garden source uses Apache-2.0. Official weights remain subject
+to the licensing and use boundaries of their Kinetics-600 data source. This
+experiment does not commit or release a checkpoint, TFLite artifact, or source
+video.

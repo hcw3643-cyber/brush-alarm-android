@@ -14,8 +14,8 @@ The current production build:
 - Creates and exports no model-inference or alarm-event CSV files
 
 Uninstalling the app or clearing app data removes local alarm settings. The model
-is installed with the app and executes through the phone CPU and available
-low-level acceleration; no cloud vision service is called.
+is installed with the app and currently executes through the ONNX Runtime CPU
+backend; no cloud vision service is called.
 
 ## Test build
 

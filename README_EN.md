@@ -12,8 +12,8 @@ detects that the user is brushing their teeth.
 > [!IMPORTANT]
 > This is community-driven experimental free software. End-to-end testing has
 > only been completed on a vivo X300 running Android 16 / OriginOS 6. It is not
-> a medically validated product, a certified cross-vendor alarm, or a guaranteed
-> wake-up mechanism. Keep a system alarm or another backup.
+> a medically validated health product, has not been certified across Android
+> vendors, and cannot guarantee wake-up. Keep a system alarm or another backup.
 
 ## Project scope
 
@@ -32,14 +32,14 @@ detects that the user is brushing their teeth.
 
 - Create, edit, enable, disable, and delete alarms.
 - Select each repeat day from Monday through Sunday.
-- Apple-style hour and minute wheels.
+- Hour and minute wheels.
 - Continuous mode: the alarm keeps sounding until brushing verification passes.
 - Roommate mode: the alarm may be silenced temporarily, but rings again every
   minute until verification passes.
 - Exact `AlarmManager` alarms, full-screen notifications, a foreground ringing
   service, and a CPU wake lock.
-- Alarm restoration after the recent-task card is dismissed, the device reboots,
-  or Direct Boot completes.
+- Alarm re-registration after screen-off operation, recent-task dismissal,
+  device reboot, and Direct Boot.
 - On-device front-camera video inference with ONNX Runtime; frames are processed
   in memory.
 - The verification screen disables Back, hides the recent-task UI, and requests
@@ -55,10 +55,32 @@ detects that the user is brushing their teeth.
   settings button on the home screen.
 - A normal Android application cannot override a system-level “Force stop” or
   provide Device Owner / kiosk-level lock-down.
-- The current model has limited user and device coverage. It may miss brushing
-  under unfamiliar faces, toothbrushes, angles, backgrounds, or lighting.
+- The current model has limited user and real-device coverage. It may miss
+  brushing with unfamiliar faces, toothbrushes, angles, or lighting.
 - See [docs/en/COMPATIBILITY.md](docs/en/COMPATIBILITY.md) for the current compatibility
   scope and test method.
+
+## Download and install
+
+Users who only want the app do not need to download the model or build from
+source:
+
+1. Open the [`v1.0.0` Release](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.0).
+2. On most recent Android phones, download
+   `BrushAlarm-v1.0.0-arm64-v8a.apk`.
+3. If the CPU architecture is unknown or the arm64 package cannot be installed,
+   use `BrushAlarm-v1.0.0-universal.apk`.
+4. Allow installation from the current source when Android asks, then follow
+   the first-launch guide for notifications, exact alarms, camera access, and
+   required vendor background settings.
+5. Set an alarm a few minutes ahead and confirm that it rings while locked and
+   after dismissing the recent-task card before relying on it the next morning.
+
+The Release APK already embeds the brushing model. Ordinary users should not
+install Debug, unsigned, x86, or 32-bit ARM internal builds and do not need the
+ONNX file from the separate `model-v1.0.0` Release. The Release also provides
+`BrushAlarm-v1.0.0-SHA256SUMS.txt`. Because cross-device adaptation is
+incomplete, always keep a system alarm as a backup.
 
 ## Build from source
 
@@ -81,8 +103,6 @@ GitHub Release asset and must be placed at:
 ```text
 app/src/main/assets/brush_classifier.onnx
 ```
-
-On Linux or WSL:
 
 ```bash
 ./scripts/fetch-model.sh
@@ -158,7 +178,7 @@ phone-domain validation and has not replaced the production model. See
 ├── scripts/             Model download and pre-release audit scripts
 ├── docs/                Architecture, compatibility, model, privacy, and data docs
 ├── design/              Logo source
-├── .github/             Issue forms and CI workflows
+├── .github/             Issue forms
 ├── README.md            Chinese README
 ├── README_EN.md         English README
 ├── LICENSE              GNU GPL v3.0 software license

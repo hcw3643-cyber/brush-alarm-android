@@ -29,7 +29,7 @@ data.
 | ONNX Script | ONNX export support | Apache-2.0 | https://github.com/microsoft/onnxscript |
 | ONNX Runtime Python | Post-export validation | MIT | https://github.com/microsoft/onnxruntime |
 | TensorFlow / LiteRT | Isolated MoViNet A0 training and mobile-format validation | Apache-2.0 | https://github.com/tensorflow/tensorflow |
-| TensorFlow Model Garden | Official MoViNet A0 implementation and pretrained-weight API | Apache-2.0 (source) | https://github.com/tensorflow/models |
+| TensorFlow Model Garden | Official MoViNet A0 architecture, tools, and pretrained-weight API | Apache-2.0 (source) | https://github.com/tensorflow/models |
 
 ## Model and data sources
 

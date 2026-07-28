@@ -52,8 +52,8 @@ the Git repository. See
 
 - Behavior matches the documentation and adds no hidden upload or tracking.
 - Debug-only test behavior cannot enter a Release build.
-- New dependencies are recorded in `THIRD_PARTY_NOTICES.md` with name, purpose,
-  and license.
+- New dependencies are recorded in `THIRD_PARTY_NOTICES.md` with name, version,
+  purpose, and license.
 - No `local.properties`, signing material, model, or build output is committed.
 - Changes involving lock-screen behavior, exact alarms, foreground services, or
   Direct Boot include a physical-device validation note.

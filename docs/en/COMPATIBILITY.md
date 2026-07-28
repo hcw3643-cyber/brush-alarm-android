@@ -79,7 +79,8 @@ The maintainer's test phone requires the following for Brush Alarm:
 
 The screenshots below only help locate settings on OriginOS 6. Names and
 locations may change after an update; other vendors use similar autostart,
-lock-screen, background-launch, and battery-restriction concepts.
+lock-screen, background-launch, and battery-restriction concepts. Select an
+image to view it at full resolution.
 
 <p>
   <a href="../images/originos6/app-background-permissions.jpg">

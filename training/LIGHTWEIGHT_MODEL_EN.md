@@ -38,8 +38,9 @@ All models use UCF101 groups 19+ for validation, overlapping windows every
 | MobileNetV3 Large + motion head | 3,344,050 | 88.89% | 69.39% | 82.93% | **75.56%** | 0.09 | 72.89% |
 
 These results compare repository experiments, not real bathrooms, users, or
-phones. At 0.70, the best lightweight model has only 60.87% precision and
-34.15% recall, so the production threshold cannot be reused directly.
+phones. The lightweight model's best threshold is 0.09. At 0.70, its
+video-level precision and recall are only 60.87% and 34.15%, so it cannot
+directly reuse the production app's 0.65 threshold.
 
 ## Export and compute
 
@@ -57,18 +58,27 @@ WSL x86 ONNX Runtime measured about 5.25 ms/frame with one thread and
 ## Reproduction
 
 After preparing the environment and S3D teacher as described in
-[README_EN.md](README_EN.md):
+[README_EN.md](README_EN.md), make sure
+`training/checkpoints/best-feedback-2s-192.pt` exists:
 
 ```bash
 python -m training.train_lightweight
 python -m training.export_lightweight_onnx
+```
+
+The training script writes `latest-lightweight-large-motion-2s-192.pt` after
+each epoch. Resume an interrupted run with:
+
+```bash
 python -m training.train_lightweight --resume
 ```
 
-Checkpoints and exports are ignored. Any future weight release must update the
-model card, hashes, device results, and provenance notices.
+Checkpoints, datasets, and exported ONNX files are excluded by `.gitignore`.
+Any future standalone weight release must update the model card, SHA-256
+hashes, and device results, and remains subject to the provenance restrictions
+in the root `MODEL_LICENSE.md` and `THIRD_PARTY_NOTICES.md`.
 
-## Before production consideration
+## Next steps
 
 1. Add contributor-isolated phone positives, stopped actions, and confusing
    mouth-area negatives.

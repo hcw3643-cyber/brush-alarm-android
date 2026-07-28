@@ -17,32 +17,55 @@ entire source video.
 
 Augmentation is clip-consistent and includes exposure/gamma, contrast, white
 balance, horizontal flip, mild motion blur, and small per-frame sensor noise.
-The released S3D starts from Kinetics-400 pretrained weights and fine-tunes on
-UCF101 plus limited phone-domain adaptation.
+The pretrained data already contains a `brushing teeth` class, so the binary
+head is initialized from that class's weights before the final two S3D blocks
+are fine-tuned on UCF101. Training then exports a single ONNX file for
+continuous sliding-window inference on Android.
 
-On the fixed group 19+ validation split, counting each source video's median
-window score once, the current S3D reaches 97.47% accuracy, 95.00% precision,
-92.68% recall, and 93.83% F1. Overlapping windows are correlated and are not
-misrepresented as independent test examples.
+On the fixed public-data validation split—UCF group 19 and later, counting each
+source video's median window score once—the base model reaches 97.47% accuracy,
+95.00% precision, 92.68% recall, and 93.83% F1. Windows overlap every 0.5
+seconds, so they are not misrepresented as independent test samples.
 
-The app uses a 0.65 high threshold, 0.10 low threshold, and six seconds of
-accumulated evidence. UCF101 only provides a base experiment; real release
-quality requires contributor-isolated phone-camera positives, stopped actions,
-and confusing mouth-area negatives.
+After one mixed fine-tuning pass with a consented positive phone recording, the
+isolated UCF metrics remain unchanged. At the fixed calibration threshold of
+0.70, video-level precision/recall is 100%/87.80%, and window-level
+precision/recall is 97.22%/89.86%. The same phone recording is used only to
+check that domain adaptation took effect, not as an independent generalization
+result: its median window score rises from about 0.46 to about 0.97, and the
+fraction of windows above 0.70 rises from 35% to 76.25%.
+
+Continuous phone brushing logs show that 0.70 rejects too many valid windows.
+App 1.0 therefore uses a 0.65 high threshold, while the low threshold remains
+0.10 and the accumulated pass duration is six seconds.
+
+UCF101 is only a base-model dataset. Before production use, the model still
+needs phone front-camera brushing, simulated brushing, and confusing
+mouth-area actions for fine-tuning.
 
 ## Layout
 
 - `configs/default.toml`: public paths, split, and loader defaults
 - `configs/s3d.toml`: production S3D experiment
 - `configs/lightweight.toml`: MobileNetV3 streaming experiment
-- `configs/movinet_a0.toml`: official MoViNet A0 Stream experiment
+- `configs/movinet_a0.toml`: official MoViNet A0 Stream validation parameters
 - `config.example.toml`: machine-local path override template
-- `config.py`: TOML merging, environment override, and path resolution
+- `config.py`: TOML merging, environment-variable overrides, and
+  repository-relative path resolution
 - `prepare_ucf101.py`: extract selected classes from UCF101 mirror shards
-- `train.py`, `finetune_feedback.py`, `export_onnx.py`: S3D pipeline
-- `train_lightweight.py`, `export_lightweight_onnx.py`: distilled MobileNetV3
-- `validate_movinet_a0.py`: one-step A0 pipeline/export validation
-- `train_movinet_a0.py`: complete A0 head training, video evaluation, and export
+- `train.py`: training and validation
+- `finetune_feedback.py`: second-stage fine-tuning with public hard negatives
+  and a consented local positive recording
+- `export_onnx.py`: export the Android model
+- `lightweight_model.py`: streaming MobileNetV3 plus temporal-difference head
+- `train_lightweight.py`: distill the current S3D into the lightweight model
+  with epoch-level resume support
+- `export_lightweight_onnx.py`: export separate frame-encoder and temporal-head
+  models
+- `validate_movinet_a0.py`: restore official A0 Stream weights and validate
+  binary-head training plus native TFLite export
+- `train_movinet_a0.py`: train the A0 binary head on the full UCF split, perform
+  video-level validation, and export TFLite
 - `analyze_inference_logs.py`: summarize manually labeled app CSV logs
 
 ## Configuration
@@ -66,7 +89,9 @@ export BRUSH_TRAINING_CACHE_DIR=/data/brush-alarm-cache
 ```
 
 Precedence is command line, environment, explicit `--config`, local config,
-experiment profile, then tracked defaults.
+experiment profile, then tracked defaults. Do not ignore the entire `configs/`
+directory, because doing so would prevent other contributors from reproducing
+the experiments.
 
 ## PyTorch environment
 
@@ -84,8 +109,11 @@ python -m training.export_lightweight_onnx
 python -m training.analyze_inference_logs /path/to/logs/
 ```
 
-Install a matching PyTorch/TorchVision CPU or CUDA pair for the local machine.
-The repository does not bind contributors to one developer's CUDA wheel.
+Install a matching PyTorch/TorchVision CPU or CUDA release pair for the local
+machine. The repository does not bind contributors to one developer's virtual
+environment or treat a CUDA 13.0 wheel as the default for everyone. For a
+specific CUDA version, use PyTorch's official installation selector first, then
+install the remaining requirements.
 
 The S3D exporter creates `training/export/brush_classifier.onnx`. It removes
 debug metadata that may contain absolute paths, checks PyTorch/ONNX Runtime
@@ -116,7 +144,8 @@ python -m pip install -r training/requirements-movinet-gpu.txt
 
 `validate_movinet_a0.py` proves weight restore, one real-video training step,
 explicit stream state, native TFLite conversion, and numerical parity.
-`train_movinet_a0.py` performs the complete fixed-split experiment:
+`train_movinet_a0.py` uses the complete fixed split, selects thresholds by
+source video, and evaluates every overlapping window:
 
 ```bash
 python -m training.train_movinet_a0
@@ -124,9 +153,11 @@ python -m training.train_movinet_a0
 
 See [MOVINET_A0_EN.md](MOVINET_A0_EN.md) for measured results and limitations.
 
-Data, video, logs, checkpoints, and exported models are ignored and must not be
-committed. Publish an approved model only as a separate Release asset with a
-SHA-256. See [the English model card](../docs/en/MODEL_CARD.md) and
+Training data, video, logs, checkpoints, and exported models are ignored and
+must not be committed. Publish an approved model only as a separate Release
+asset with a recorded SHA-256. Model provenance, metrics, and limitations are
+defined in [the English model card](../docs/en/MODEL_CARD.md). Volunteer video
+must not be submitted through a public Issue or pull request; see the
 [data contribution notice](../docs/en/DATA_CONTRIBUTION.md).
 
 The experimental MobileNetV3 comparison is documented in

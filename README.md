@@ -43,6 +43,25 @@
 - 当前兼容性范围和测试方法见
   [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。
 
+## 下载和安装
+
+只想使用 App 的用户不需要下载模型或自行构建：
+
+1. 打开 [`v1.0.0` Release](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.0)；
+2. 大多数近年的 Android 手机下载
+   `BrushAlarm-v1.0.0-arm64-v8a.apk`；
+3. 不确定 CPU 架构或 arm64 包无法安装时，改用
+   `BrushAlarm-v1.0.0-universal.apk`；
+4. 按系统提示允许从当前来源安装，然后首次启动按 App 引导开启通知、精确闹钟、
+   摄像头和必要的厂商后台权限；
+5. 先设置一个几分钟后的测试闹钟，确认锁屏和划掉最近任务后仍能响铃，再用于次日
+   起床。
+
+Release APK 已内嵌刷牙模型。普通用户不要下载 Debug、unsigned、x86 或 32 位 ARM
+内部构建产物，也不需要另行下载 `model-v1.0.0` Release 中的 ONNX 文件。Release
+页面同时提供 `BrushAlarm-v1.0.0-SHA256SUMS.txt` 校验文件。由于本项目尚未完成
+多机型适配，请始终保留系统闹钟作为备用。
+
 ## 从源码运行
 
 ### 1. 环境

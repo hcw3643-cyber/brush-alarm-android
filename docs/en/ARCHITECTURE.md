@@ -61,6 +61,6 @@ different application IDs and do not share data.
 - `app/src/main/`: production runtime code and shared resources
 - `app/src/debug/`, `app/src/release/`: build-type-specific behavior
 - `app/src/test/`: local unit tests
-- `training/`: data preparation, training, calibration, and export
+- `training/`: data preparation, training, log analysis, and ONNX export
 - `docs/`: public architecture, compatibility, model, privacy, and data policy
 - `scripts/`: model download and public-tree audits
