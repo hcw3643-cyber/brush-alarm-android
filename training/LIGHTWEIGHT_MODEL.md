@@ -56,14 +56,14 @@ WSL x86 CPU 上的 ONNX Runtime 参考结果为单线程约 5.25 ms/帧、四线
 `training/checkpoints/best-feedback-2s-192.pt` 存在：
 
 ```bash
-python training/train_lightweight.py
-python training/export_lightweight_onnx.py
+python -m training.train_lightweight
+python -m training.export_lightweight_onnx
 ```
 
 训练脚本每轮写入 `latest-lightweight-large-motion-2s-192.pt`，中断后可续训：
 
 ```bash
-python training/train_lightweight.py --resume
+python -m training.train_lightweight --resume
 ```
 
 检查点、数据和导出的 ONNX 均被 `.gitignore` 排除。若将来单独发布权重，应更新模型

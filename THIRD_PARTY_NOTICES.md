@@ -24,6 +24,8 @@ GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数�
 | ONNX | 模型格式与检查 | Apache-2.0 | https://github.com/onnx/onnx |
 | ONNX Script | ONNX 导出支持 | Apache-2.0 | https://github.com/microsoft/onnxscript |
 | ONNX Runtime Python | 导出后验证 | MIT | https://github.com/microsoft/onnxruntime |
+| TensorFlow / LiteRT | MoViNet A0 隔离训练与移动端格式验证 | Apache-2.0 | https://github.com/tensorflow/tensorflow |
+| TensorFlow Model Garden | 官方 MoViNet A0 架构、工具和预训练权重接口 | Apache-2.0（源码） | https://github.com/tensorflow/models |
 
 ## 模型和数据来源
 
@@ -31,6 +33,8 @@ GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数�
   https://docs.pytorch.org/vision/main/models/generated/torchvision.models.video.s3d.html
 - 实验性流式模型使用的 TorchVision MobileNetV3 Large ImageNet-1K V2：
   https://docs.pytorch.org/vision/main/models/generated/torchvision.models.mobilenet_v3_large.html
+- 实验性 MoViNet A0 Stream 架构与权重：
+  https://github.com/tensorflow/models/tree/master/official/projects/movinet
 - TorchVision 预训练模型许可提示：
   https://github.com/pytorch/vision#pre-trained-model-license
 - Kinetics 数据集下载与说明：
@@ -43,4 +47,5 @@ GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数�
 Hugging Face 镜像未提供 Dataset Card 或明确许可证。项目只用它复现实验数据，不把
 镜像上传者视为 UCF101 权利人，也不再分发镜像中的原始视频。实验性轻量模型同时
 使用 ImageNet-1K 预训练权重，并从当前 S3D 模型蒸馏，因此不会消除 S3D、Kinetics
-或 UCF101 的来源与许可边界。
+或 UCF101 的来源与许可边界。MoViNet A0 验证使用 Kinetics-600 预训练权重，因此也
+不能消除 Kinetics 数据来源的许可边界；当前只记录可行性，不提交或发布 A0 权重。

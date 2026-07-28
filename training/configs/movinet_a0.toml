@@ -1,0 +1,19 @@
+[experiment]
+name = "movinet-a0-brush-binary"
+framework = "tensorflow"
+seed = 44
+model_id = "a0"
+mode = "stream"
+conv_type = "2plus1d"
+se_type = "2plus3d"
+activation = "hard_swish"
+gating_activation = "hard_sigmoid"
+pretrained_classes = 600
+target_classes = 1
+frames = 16
+size = 172
+sample_fps = 8.0
+batch_size = 1
+checkpoint_url = "https://storage.googleapis.com/tf_model_garden/vision/movinet/movinet_a0_stream.tar.gz"
+checkpoint_directory = "movinet_a0_stream"
+validation_output = "movinet-a0-validation.json"

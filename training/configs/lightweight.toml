@@ -1,0 +1,19 @@
+[experiment]
+name = "mobilenet-v3-large-stream-tcn-v1"
+seed = 43
+epochs = 14
+batch_size = 2
+workers = 4
+unfreeze_epoch = 4
+unfreeze_blocks = 3
+head_learning_rate = 8e-4
+finetune_learning_rate = 1e-5
+weight_decay = 2e-4
+backbone = "large"
+head_version = "motion"
+hard_weight = 0.70
+temperature = 2.0
+teacher_checkpoint = "best-feedback-2s-192.pt"
+checkpoint = "best-lightweight-large-motion-2s-192.pt"
+latest_checkpoint = "latest-lightweight-large-motion-2s-192.pt"
+export_directory = "lightweight-large-motion"

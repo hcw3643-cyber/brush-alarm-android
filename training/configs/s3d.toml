@@ -1,0 +1,25 @@
+[experiment]
+name = "s3d-brush-binary"
+seed = 42
+epochs = 14
+train_batch_size = 2
+validation_batch_size = 4
+freeze_epochs = 4
+unfreeze_blocks = 2
+head_learning_rate = 5e-4
+finetune_learning_rate = 1e-5
+weight_decay = 1e-4
+early_stop_after = 4
+early_stop_min_epoch = 8
+checkpoint = "best-2s-192.pt"
+feedback_checkpoint = "best-feedback-2s-192.pt"
+export_model = "brush_classifier.onnx"
+
+[feedback]
+epochs = 5
+train_batch_size = 2
+validation_batch_size = 4
+workers = 2
+learning_rate = 5e-6
+minimum_public_f1 = 0.91
+minimum_high_threshold_precision = 0.95

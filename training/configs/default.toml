@@ -1,0 +1,32 @@
+# Public, reproducible defaults. Machine-specific paths belong in
+# ../config.local.toml or BRUSH_TRAINING_* environment variables.
+
+[paths]
+data_dir = "training/data"
+checkpoint_dir = "training/checkpoints"
+export_dir = "training/export"
+cache_dir = "training/.cache"
+
+[dataset]
+manifest = "manifest.json"
+train_group_max = 18
+validation_step_seconds = 0.5
+fallback_video_fps = 25.0
+
+[loader]
+workers = 4
+pin_memory = true
+
+[download]
+metadata_url = "https://huggingface.co/datasets/guyuchao/UCF101/resolve/main/trainval.json"
+shards = [
+  "https://huggingface.co/datasets/guyuchao/UCF101/resolve/main/shard-00000.tar",
+  "https://huggingface.co/datasets/guyuchao/UCF101/resolve/main/shard-00001.tar",
+]
+
+[download.classes]
+BrushingTeeth = 1
+ApplyLipstick = 0
+BlowDryHair = 0
+HeadMassage = 0
+ShavingBeard = 0

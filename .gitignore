@@ -47,6 +47,8 @@ venv/
 training/data/
 training/checkpoints/
 training/export/
+training/.cache/
+training/config.local.toml
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -70,6 +72,7 @@ app/src/main/assets/brush_classifier.onnx
 *.log
 
 # Local AI/editor metadata
+AGENTS.md
 .claude/
 .opencode/
 

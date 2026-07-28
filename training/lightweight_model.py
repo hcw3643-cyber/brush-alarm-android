@@ -12,7 +12,7 @@ from torchvision.models import (
     mobilenet_v3_small,
 )
 
-from model import FRAMES
+from training.model import FRAMES
 
 EMBEDDING_SIZE = 192
 
@@ -156,7 +156,9 @@ class LightweightBrushClassifier(nn.Module):
         self.encoder = FrameEncoder(pretrained=pretrained, backbone=backbone)
         if head_version not in ("pooled", "motion"):
             raise ValueError(f"Unsupported temporal head: {head_version}")
-        self.temporal_head = TemporalBrushHead(use_motion_summary=head_version == "motion")
+        self.temporal_head = TemporalBrushHead(
+            use_motion_summary=head_version == "motion"
+        )
 
     def set_trainable_stage(self, last_blocks: int = 0) -> None:
         self.encoder.set_trainable_stage(last_blocks)

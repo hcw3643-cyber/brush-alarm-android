@@ -34,6 +34,12 @@ UCF101 只用于基础模型。实际发布前必须加入手机前置摄像头�
 
 ## 目录
 
+- `configs/default.toml`：路径、数据划分和加载器的公开默认值
+- `configs/s3d.toml`：正式 S3D 实验参数
+- `configs/lightweight.toml`：MobileNetV3 流式实验参数
+- `configs/movinet_a0.toml`：官方 MoViNet A0 流式验证参数
+- `config.example.toml`：本机路径覆盖模板
+- `config.py`：TOML 合并、环境变量覆盖和仓库相对路径解析
 - `prepare_ucf101.py`：从 UCF101 Hugging Face tar 分片中提取需要的类别
 - `train.py`：训练与验证
 - `finetune_feedback.py`：混合公开困难负样本和经同意的本地真机正样本做第二阶段微调
@@ -41,27 +47,75 @@ UCF101 只用于基础模型。实际发布前必须加入手机前置摄像头�
 - `lightweight_model.py`：流式 MobileNetV3 + 时序差分头
 - `train_lightweight.py`：用当前 S3D 模型蒸馏轻量模型，并支持逐轮断点续训
 - `export_lightweight_onnx.py`：分别导出逐帧编码器和时序头
+- `validate_movinet_a0.py`：恢复官方 A0 Stream 权重，验证二分类头训练和原生 TFLite 导出
 - `analyze_inference_logs.py`：汇总 App 导出的带人工标签 CSV
 
-## 运行
+## 配置
+
+可复现实验参数提交在 `configs/*.toml`。默认路径以仓库根目录为基准，不依赖运行命令
+时的当前目录，也不包含维护者用户名。
+
+只有在数据或输出位于仓库之外时，才复制本机模板：
+
+```bash
+cp training/config.example.toml training/config.local.toml
+```
+
+`config.local.toml` 已被 `.gitignore` 排除。密钥和 Token 不应写进 TOML，应使用环境
+变量或 CI Secret。路径也可使用：
+
+```bash
+export BRUSH_TRAINING_DATA_DIR=/data/brush-alarm
+export BRUSH_TRAINING_CHECKPOINT_DIR=/data/brush-alarm-checkpoints
+export BRUSH_TRAINING_EXPORT_DIR=/data/brush-alarm-exports
+export BRUSH_TRAINING_CACHE_DIR=/data/brush-alarm-cache
+```
+
+覆盖优先级为：命令行参数、环境变量、`--config` 指定文件、`config.local.toml`、实验
+配置、默认配置。不要把整个 `configs/` 加入 `.gitignore`，否则其他人无法复现实验。
+
+## PyTorch 运行环境
 
 ```bash
 python -m venv .venv-training
 source .venv-training/bin/activate
 python -m pip install -r training/requirements.txt
-python training/prepare_ucf101.py
-python training/train.py
-python training/finetune_feedback.py \
+python -m training.prepare_ucf101
+python -m training.train
+python -m training.finetune_feedback \
   --positive-video /path/to/consented-brushing-video.mp4
-python training/export_onnx.py
-python training/train_lightweight.py
-python training/export_lightweight_onnx.py
-python training/analyze_inference_logs.py /path/to/logs/
+python -m training.export_onnx
+python -m training.train_lightweight
+python -m training.export_lightweight_onnx
+python -m training.analyze_inference_logs /path/to/logs/
 ```
 
+PyTorch 和 TorchVision 必须选择与本机 CPU/CUDA 匹配的同一发布组合。仓库不固定任何
+开发者的虚拟环境，也不把 CUDA 13.0 wheel 当成所有人的默认值。需要特定 CUDA
+版本时应按 PyTorch 官方安装选择器执行，再安装其余依赖。
+
 生成的 `training/export/brush_classifier.onnx` 需复制到
-`app/src/main/assets/brush_classifier.onnx`。下载环境如果需要 WSL 宿主机代理，可设置
-`TRAINING_PROXY=http://<WSL默认网关>:7890`；准备脚本默认也会尝试这个地址。
+`app/src/main/assets/brush_classifier.onnx`。导出器会删除可能包含本机绝对路径的
+ONNX 调试元数据，执行 PyTorch/ONNX Runtime 数值一致性检查，并在发现本机路径时
+拒绝生成发布产物。
+
+下载默认遵循标准 `HTTP_PROXY`、`HTTPS_PROXY` 和 `NO_PROXY`。若只想覆盖数据准备
+脚本，可额外设置 `TRAINING_PROXY`；项目不再假设 WSL 网关或固定的 7890 端口。
+
+## MoViNet A0 隔离验证
+
+TensorFlow Model Garden 的依赖树与 PyTorch 相互独立，因此使用另一个虚拟环境：
+
+```bash
+python -m venv .venv-movinet
+source .venv-movinet/bin/activate
+python -m pip install -r training/requirements-movinet.txt
+python -m training.validate_movinet_a0
+```
+
+验证结论、实际 TFLite 大小和限制见 [`MOVINET_A0.md`](MOVINET_A0.md)。该脚本只验证
+官方权重恢复、真实 clip 前向、二分类头反向、显式流状态、原生 TFLite 转换与数值
+一致性；一次训练步不是准确率实验。
 
 训练数据、视频、日志、检查点和导出模型都被 `.gitignore` 排除，不能提交到仓库。
 正式发布模型时应使用独立 Release 资产并记录 SHA-256。模型来源、指标和限制以

@@ -27,7 +27,9 @@ class BrushVideoClassifier(nn.Module):
         # S3D was already trained to distinguish "brushing teeth" in Kinetics-400.
         # Reusing that class head gives binary fine-tuning a useful, interpretable start.
         if pretrained:
-            class_index = S3D_Weights.KINETICS400_V1.meta["categories"].index("brushing teeth")
+            class_index = S3D_Weights.KINETICS400_V1.meta["categories"].index(
+                "brushing teeth"
+            )
             source = backbone.classifier[1]
             with torch.no_grad():
                 self.classifier.weight.copy_(source.weight[class_index, :, 0, 0, 0])

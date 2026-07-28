@@ -13,10 +13,10 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-from model import SAMPLE_FPS, BrushVideoClassifier
-from train import (
+from training.config import load_config, repository_relative
+from training.model import BrushVideoClassifier
+from training.train import (
     Clips,
-    ROOT,
     WINDOW_SPAN_SECONDS,
     evaluate,
     expand_validation_windows,
@@ -36,6 +36,7 @@ def feedback_windows(video: Path) -> list[dict]:
     return [
         {
             "path": str(video.resolve()),
+            "id": "local_feedback_positive",
             "label": 1,
             "start_seconds": float(start),
             "source": "local_feedback",
@@ -64,46 +65,76 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Fine-tune the public-data model with a consented local brushing video."
     )
+    parser.add_argument("--config", type=Path)
     parser.add_argument("--positive-video", required=True, type=Path)
-    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--epochs", type=int)
+    parser.add_argument("--source", type=Path)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
-    rows = json.loads((ROOT / "data/manifest.json").read_text())
-    public_train = [row for row in rows if group_id(row["path"]) <= 18]
-    public_val = [row for row in rows if group_id(row["path"]) > 18]
+    config = load_config("s3d", args.config)
+    experiment = config.section("experiment")
+    feedback_config = config.section("feedback")
+    dataset = config.section("dataset")
+    loader = config.section("loader")
+    data_dir = config.paths.data_dir
+    manifest = data_dir / str(dataset["manifest"])
+    source_path = args.source or (
+        config.paths.checkpoint_dir / str(experiment["checkpoint"])
+    )
+    output = args.output or (
+        config.paths.checkpoint_dir / str(experiment["feedback_checkpoint"])
+    )
+    epochs = args.epochs if args.epochs is not None else int(feedback_config["epochs"])
+    workers = int(feedback_config["workers"])
+    fallback_video_fps = float(dataset["fallback_video_fps"])
+    train_group_max = int(dataset["train_group_max"])
+    validation_step = float(dataset["validation_step_seconds"])
+    pin_memory = bool(loader["pin_memory"])
+
+    rows = json.loads(manifest.read_text(encoding="utf-8"))
+    public_train = [row for row in rows if group_id(row["path"]) <= train_group_max]
+    public_val = [row for row in rows if group_id(row["path"]) > train_group_max]
     feedback = feedback_windows(args.positive_video)
     combined = public_train + feedback
 
     counts = {label: sum(row["label"] == label for row in combined) for label in (0, 1)}
     weights = [1.0 / counts[row["label"]] for row in combined]
     train_loader = DataLoader(
-        Clips(combined, True),
-        batch_size=2,
+        Clips(combined, True, data_dir, fallback_video_fps),
+        batch_size=int(feedback_config["train_batch_size"]),
         sampler=WeightedRandomSampler(weights, len(combined), replacement=True),
-        num_workers=2,
-        pin_memory=True,
-        persistent_workers=True,
+        num_workers=workers,
+        pin_memory=pin_memory,
+        persistent_workers=workers > 0,
     )
     public_val_loader = DataLoader(
-        Clips(expand_validation_windows(public_val), False),
-        batch_size=4,
+        Clips(
+            expand_validation_windows(
+                public_val, data_dir, validation_step, fallback_video_fps
+            ),
+            False,
+            data_dir,
+            fallback_video_fps,
+        ),
+        batch_size=int(feedback_config["validation_batch_size"]),
         shuffle=False,
-        num_workers=2,
-        pin_memory=True,
-        persistent_workers=True,
+        num_workers=workers,
+        pin_memory=pin_memory,
+        persistent_workers=workers > 0,
     )
     feedback_loader = DataLoader(
-        Clips(feedback, False),
-        batch_size=4,
+        Clips(feedback, False, data_dir, fallback_video_fps),
+        batch_size=int(feedback_config["validation_batch_size"]),
         shuffle=False,
         num_workers=1,
-        pin_memory=True,
+        pin_memory=pin_memory,
         persistent_workers=True,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     source = torch.load(
-        ROOT / "checkpoints/best-2s-192.pt",
+        source_path,
         map_location=device,
         weights_only=False,
     )
@@ -112,14 +143,14 @@ def main() -> None:
     model.set_trainable_stage(2)
     optimizer = torch.optim.AdamW(
         [parameter for parameter in model.parameters() if parameter.requires_grad],
-        lr=5e-6,
-        weight_decay=1e-4,
+        lr=float(feedback_config["learning_rate"]),
+        weight_decay=float(experiment["weight_decay"]),
     )
     loss_fn = nn.BCEWithLogitsLoss()
-    output = ROOT / "checkpoints/best-feedback-2s-192.pt"
+    output.parent.mkdir(parents=True, exist_ok=True)
     best_feedback = -1.0
 
-    for epoch in range(args.epochs + 1):
+    for epoch in range(epochs + 1):
         public_metrics = evaluate(model, public_val_loader, device)
         local_metrics = feedback_metrics(model, feedback_loader, device)
         print(
@@ -132,8 +163,9 @@ def main() -> None:
         # Permit a small public-benchmark tradeoff, but never select a model that
         # fixes one local clip by broadly forgetting the hard negatives.
         if (
-            public_metrics["f1"] >= 0.91
-            and public_metrics["high_0_70_video_precision"] >= 0.95
+            public_metrics["f1"] >= float(feedback_config["minimum_public_f1"])
+            and public_metrics["high_0_70_video_precision"]
+            >= float(feedback_config["minimum_high_threshold_precision"])
             and local_metrics["above_high"] > best_feedback
         ):
             best_feedback = local_metrics["above_high"]
@@ -146,7 +178,7 @@ def main() -> None:
                 },
                 output,
             )
-        if epoch == args.epochs:
+        if epoch == epochs:
             break
 
         model.train()
@@ -158,7 +190,10 @@ def main() -> None:
             loss.backward()
             optimizer.step()
 
-    print(f"saved={output} best_feedback_above_0.70={best_feedback:.4f}")
+    print(
+        f"saved={repository_relative(output)} "
+        f"best_feedback_above_0.70={best_feedback:.4f}"
+    )
 
 
 if __name__ == "__main__":

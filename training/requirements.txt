@@ -1,6 +1,9 @@
-# Reuse /home/dev/.venvs/ai-infra (torch 2.12.1+cu130 is already installed).
-torchvision==0.27.1+cu130
-opencv-python-headless==5.0.0.93
-onnx==1.22.0
-onnxscript==0.7.1
-onnxruntime==1.23.2
+# Install a PyTorch/TorchVision build appropriate for the local CPU or CUDA
+# runtime. See training/README.md; no developer-specific environment is assumed.
+torch>=2.8,<2.13
+torchvision>=0.23,<0.28
+numpy>=2.0,<3
+opencv-python-headless>=4.10,<6
+onnx>=1.18,<2
+onnxscript>=0.3,<1
+onnxruntime>=1.20,<2

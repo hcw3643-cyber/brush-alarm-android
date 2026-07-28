@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import random
 import re
@@ -15,35 +16,40 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
-from model import FRAMES, SAMPLE_FPS, SIZE, BrushVideoClassifier
+from training.config import load_config, repository_relative
+from training.model import FRAMES, SAMPLE_FPS, SIZE, BrushVideoClassifier
 
-ROOT = Path(__file__).resolve().parent
 MEAN = np.asarray([0.43216, 0.394666, 0.37645], np.float32).reshape(1, 1, 1, 3)
 STD = np.asarray([0.22803, 0.22145, 0.216989], np.float32).reshape(1, 1, 1, 3)
 WINDOW_SPAN_SECONDS = (FRAMES - 1) / SAMPLE_FPS
-VALIDATION_STEP_SECONDS = 0.5
-random.seed(42)
-np.random.seed(42)
-torch.manual_seed(42)
 
 
 class Clips(Dataset):
     """Fixed-time clips matching Android: 16 RGB frames sampled at 8 fps."""
 
-    def __init__(self, rows: list[dict], training: bool) -> None:
+    def __init__(
+        self,
+        rows: list[dict],
+        training: bool,
+        data_dir: Path,
+        fallback_video_fps: float = 25.0,
+    ) -> None:
         self.rows = rows
         self.training = training
+        self.data_dir = data_dir
+        self.fallback_video_fps = fallback_video_fps
 
     def __len__(self) -> int:
         return len(self.rows)
 
     def __getitem__(self, index: int):
         row = self.rows[index]
-        cap = cv2.VideoCapture(str(ROOT / row["path"]))
+        video_path = resolve_video_path(self.data_dir, row["path"])
+        cap = cv2.VideoCapture(str(video_path))
         count = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), FRAMES)
         fps = cap.get(cv2.CAP_PROP_FPS)
         if fps <= 0:
-            fps = 25.0
+            fps = self.fallback_video_fps
         last_offset = (FRAMES - 1) * fps / SAMPLE_FPS
         max_start = max(0.0, count - 1 - last_offset)
         if self.training and "start_seconds" not in row:
@@ -71,9 +77,12 @@ class Clips(Dataset):
                 side = min(height, width)
                 top = (height - side) // 2
                 left = (width - side) // 2
-                frame = frame[top:top + side, left:left + side]
+                frame = frame[top : top + side, left : left + side]
                 frame = cv2.resize(frame, (SIZE, SIZE), interpolation=cv2.INTER_LINEAR)
-                while target_index < len(positions) and source_index >= positions[target_index]:
+                while (
+                    target_index < len(positions)
+                    and source_index >= positions[target_index]
+                ):
                     frames.append(frame.copy())
                     target_index += 1
             source_index += 1
@@ -91,7 +100,7 @@ class Clips(Dataset):
         return (
             torch.from_numpy(clip),
             torch.tensor(float(row["label"])),
-            row["path"],
+            row.get("id", row["path"]),
         )
 
 
@@ -129,17 +138,37 @@ def group_id(path: str) -> int:
     return int(match.group(1)) if match else 0
 
 
-def expand_validation_windows(rows: list[dict]) -> list[dict]:
+def resolve_video_path(data_dir: Path, value: str) -> Path:
+    """Resolve new data-root-relative manifests and legacy training-relative ones."""
+
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    data_relative = data_dir / path
+    if data_relative.exists():
+        return data_relative
+    legacy_training_relative = data_dir.parent / path
+    return (
+        legacy_training_relative if legacy_training_relative.exists() else data_relative
+    )
+
+
+def expand_validation_windows(
+    rows: list[dict],
+    data_dir: Path,
+    validation_step_seconds: float = 0.5,
+    fallback_video_fps: float = 25.0,
+) -> list[dict]:
     windows: list[dict] = []
     for row in rows:
-        cap = cv2.VideoCapture(str(ROOT / row["path"]))
+        cap = cv2.VideoCapture(str(resolve_video_path(data_dir, row["path"])))
         count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
         cap.release()
-        fps = fps if fps > 0 else 25.0
+        fps = fps if fps > 0 else fallback_video_fps
         duration = max(0.0, (count - 1) / fps)
         max_start = max(0.0, duration - WINDOW_SPAN_SECONDS)
-        starts = list(np.arange(0.0, max_start + 1e-6, VALIDATION_STEP_SECONDS))
+        starts = list(np.arange(0.0, max_start + 1e-6, validation_step_seconds))
         if not starts or max_start - starts[-1] > 0.2:
             starts.append(max_start)
         for start in starts:
@@ -147,7 +176,9 @@ def expand_validation_windows(rows: list[dict]) -> list[dict]:
     return windows
 
 
-def binary_metrics(outputs: list[float], targets: list[float], threshold: float) -> dict:
+def binary_metrics(
+    outputs: list[float], targets: list[float], threshold: float
+) -> dict:
     predicted = [value >= threshold for value in outputs]
     tp = sum(p and y == 1 for p, y in zip(predicted, targets))
     fp = sum(p and y == 0 for p, y in zip(predicted, targets))
@@ -207,60 +238,105 @@ def evaluate(model, loader, device) -> dict[str, float]:
     }
 
 
+def seed_everything(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
 def main() -> None:
-    rows = json.loads((ROOT / "data/manifest.json").read_text())
-    train_rows = [row for row in rows if group_id(row["path"]) <= 18]
-    val_rows = [row for row in rows if group_id(row["path"]) > 18]
-    val_windows = expand_validation_windows(val_rows)
+    parser = argparse.ArgumentParser(description="Train the S3D brush classifier.")
+    parser.add_argument("--config", type=Path)
+    parser.add_argument("--epochs", type=int)
+    parser.add_argument("--batch-size", type=int)
+    parser.add_argument("--validation-batch-size", type=int)
+    parser.add_argument("--workers", type=int)
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+
+    config = load_config("s3d", args.config)
+    experiment = config.section("experiment")
+    dataset = config.section("dataset")
+    loader = config.section("loader")
+    data_dir = config.paths.data_dir
+    manifest = data_dir / str(dataset["manifest"])
+    checkpoint = args.output or (
+        config.paths.checkpoint_dir / str(experiment["checkpoint"])
+    )
+    epochs = args.epochs or int(experiment["epochs"])
+    train_batch_size = args.batch_size or int(experiment["train_batch_size"])
+    validation_batch_size = args.validation_batch_size or int(
+        experiment["validation_batch_size"]
+    )
+    workers = args.workers if args.workers is not None else int(loader["workers"])
+    seed = args.seed if args.seed is not None else int(experiment["seed"])
+    train_group_max = int(dataset["train_group_max"])
+    validation_step = float(dataset["validation_step_seconds"])
+    fallback_video_fps = float(dataset["fallback_video_fps"])
+    pin_memory = bool(loader["pin_memory"])
+    seed_everything(seed)
+
+    rows = json.loads(manifest.read_text(encoding="utf-8"))
+    train_rows = [row for row in rows if group_id(row["path"]) <= train_group_max]
+    val_rows = [row for row in rows if group_id(row["path"]) > train_group_max]
+    val_windows = expand_validation_windows(
+        val_rows, data_dir, validation_step, fallback_video_fps
+    )
     if not train_rows or not val_windows:
         raise RuntimeError("Dataset split is empty")
 
-    counts = {label: sum(row["label"] == label for row in train_rows) for label in (0, 1)}
+    counts = {
+        label: sum(row["label"] == label for row in train_rows) for label in (0, 1)
+    }
     weights = [1.0 / counts[row["label"]] for row in train_rows]
     sampler = WeightedRandomSampler(weights, len(train_rows), replacement=True)
     train_loader = DataLoader(
-        Clips(train_rows, True),
-        batch_size=2,
+        Clips(train_rows, True, data_dir, fallback_video_fps),
+        batch_size=train_batch_size,
         sampler=sampler,
-        num_workers=4,
-        pin_memory=True,
-        persistent_workers=True,
+        num_workers=workers,
+        pin_memory=pin_memory,
+        persistent_workers=workers > 0,
     )
     val_loader = DataLoader(
-        Clips(val_windows, False),
-        batch_size=4,
+        Clips(val_windows, False, data_dir, fallback_video_fps),
+        batch_size=validation_batch_size,
         shuffle=False,
-        num_workers=4,
-        pin_memory=True,
-        persistent_workers=True,
+        num_workers=workers,
+        pin_memory=pin_memory,
+        persistent_workers=workers > 0,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = BrushVideoClassifier(pretrained=True).to(device)
     model.set_trainable_stage(0)
     loss_fn = nn.BCEWithLogitsLoss()
-    checkpoint = ROOT / "checkpoints/best-2s-192.pt"
-    checkpoint.parent.mkdir(exist_ok=True)
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
     best_f1 = -1.0
     epochs_without_improvement = 0
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
-        lr=5e-4,
-        weight_decay=1e-4,
+        lr=float(experiment["head_learning_rate"]),
+        weight_decay=float(experiment["weight_decay"]),
     )
 
     print(
+        f"config={','.join(path.name for path in config.sources)} "
         f"train_videos={len(train_rows)} val_videos={len(val_rows)} "
         f"val_windows={len(val_windows)} span={WINDOW_SPAN_SECONDS:.3f}s",
         flush=True,
     )
-    for epoch in range(14):
-        if epoch == 4:
-            model.set_trainable_stage(2)
+    freeze_epochs = int(experiment["freeze_epochs"])
+    for epoch in range(epochs):
+        if epoch == freeze_epochs:
+            model.set_trainable_stage(int(experiment["unfreeze_blocks"]))
             optimizer = torch.optim.AdamW(
                 [p for p in model.parameters() if p.requires_grad],
-                lr=1e-5,
-                weight_decay=1e-4,
+                lr=float(experiment["finetune_learning_rate"]),
+                weight_decay=float(experiment["weight_decay"]),
             )
         model.train()
         running = 0.0
@@ -296,10 +372,12 @@ def main() -> None:
             epochs_without_improvement = 0
         else:
             epochs_without_improvement += 1
-        if epoch >= 7 and epochs_without_improvement >= 4:
+        if epoch + 1 >= int(
+            experiment["early_stop_min_epoch"]
+        ) and epochs_without_improvement >= int(experiment["early_stop_after"]):
             print("early_stop", flush=True)
             break
-    print(f"best_f1={best_f1:.4f} checkpoint={checkpoint}")
+    print(f"best_f1={best_f1:.4f} checkpoint={repository_relative(checkpoint)}")
 
 
 if __name__ == "__main__":

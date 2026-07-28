@@ -1,0 +1,4 @@
+# Keep TensorFlow Model Garden isolated from the PyTorch environment.
+tensorflow==2.20.0
+tf-models-official==2.20.0
+ai-edge-litert>=2.1,<3

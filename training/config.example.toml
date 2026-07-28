@@ -1,0 +1,8 @@
+# Copy this file to config.local.toml only when repository-relative defaults do
+# not fit your machine. Never add tokens, passwords, or private upload URLs.
+
+[paths]
+data_dir = "/path/to/brush-alarm-data"
+checkpoint_dir = "/path/to/brush-alarm-checkpoints"
+export_dir = "/path/to/brush-alarm-exports"
+cache_dir = "/path/to/brush-alarm-cache"

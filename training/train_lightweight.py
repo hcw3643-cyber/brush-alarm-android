@@ -13,11 +13,11 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-from lightweight_model import LightweightBrushClassifier
-from model import BrushVideoClassifier
-from train import (
+from training.config import load_config, repository_relative
+from training.lightweight_model import LightweightBrushClassifier
+from training.model import BrushVideoClassifier
+from training.train import (
     Clips,
-    ROOT,
     WINDOW_SPAN_SECONDS,
     evaluate,
     expand_validation_windows,
@@ -33,27 +33,40 @@ def seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-def make_loaders(batch_size: int, workers: int):
-    rows = json.loads((ROOT / "data/manifest.json").read_text())
-    train_rows = [row for row in rows if group_id(row["path"]) <= 18]
-    val_rows = [row for row in rows if group_id(row["path"]) > 18]
-    val_windows = expand_validation_windows(val_rows)
-    counts = {label: sum(row["label"] == label for row in train_rows) for label in (0, 1)}
+def make_loaders(
+    data_dir: Path,
+    manifest_name: str,
+    train_group_max: int,
+    validation_step_seconds: float,
+    fallback_video_fps: float,
+    batch_size: int,
+    workers: int,
+    pin_memory: bool,
+):
+    rows = json.loads((data_dir / manifest_name).read_text(encoding="utf-8"))
+    train_rows = [row for row in rows if group_id(row["path"]) <= train_group_max]
+    val_rows = [row for row in rows if group_id(row["path"]) > train_group_max]
+    val_windows = expand_validation_windows(
+        val_rows, data_dir, validation_step_seconds, fallback_video_fps
+    )
+    counts = {
+        label: sum(row["label"] == label for row in train_rows) for label in (0, 1)
+    }
     weights = [1.0 / counts[row["label"]] for row in train_rows]
     train_loader = DataLoader(
-        Clips(train_rows, True),
+        Clips(train_rows, True, data_dir, fallback_video_fps),
         batch_size=batch_size,
         sampler=WeightedRandomSampler(weights, len(train_rows), replacement=True),
         num_workers=workers,
-        pin_memory=True,
+        pin_memory=pin_memory,
         persistent_workers=workers > 0,
     )
     val_loader = DataLoader(
-        Clips(val_windows, False),
+        Clips(val_windows, False, data_dir, fallback_video_fps),
         batch_size=max(8, batch_size * 4),
         shuffle=False,
         num_workers=workers,
-        pin_memory=True,
+        pin_memory=pin_memory,
         persistent_workers=workers > 0,
     )
     return train_rows, val_rows, val_windows, train_loader, val_loader
@@ -73,31 +86,29 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Train a streaming MobileNetV3 + temporal head with S3D distillation."
     )
-    parser.add_argument("--epochs", type=int, default=14)
-    parser.add_argument("--batch-size", type=int, default=2)
-    parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--seed", type=int, default=43)
-    parser.add_argument("--unfreeze-epoch", type=int, default=4)
-    parser.add_argument("--unfreeze-blocks", type=int, default=3)
-    parser.add_argument("--finetune-lr", type=float, default=1e-5)
-    parser.add_argument("--backbone", choices=("small", "large"), default="large")
-    parser.add_argument("--head-version", choices=("pooled", "motion"), default="motion")
-    parser.add_argument("--hard-weight", type=float, default=0.70)
-    parser.add_argument("--temperature", type=float, default=2.0)
+    parser.add_argument("--config", type=Path)
+    parser.add_argument("--epochs", type=int)
+    parser.add_argument("--batch-size", type=int)
+    parser.add_argument("--workers", type=int)
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--unfreeze-epoch", type=int)
+    parser.add_argument("--unfreeze-blocks", type=int)
+    parser.add_argument("--finetune-lr", type=float)
+    parser.add_argument("--backbone", choices=("small", "large"))
+    parser.add_argument("--head-version", choices=("pooled", "motion"))
+    parser.add_argument("--hard-weight", type=float)
+    parser.add_argument("--temperature", type=float)
     parser.add_argument(
         "--teacher",
         type=Path,
-        default=ROOT / "checkpoints/best-feedback-2s-192.pt",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=ROOT / "checkpoints/best-lightweight-large-motion-2s-192.pt",
     )
     parser.add_argument(
         "--latest",
         type=Path,
-        default=ROOT / "checkpoints/latest-lightweight-large-motion-2s-192.pt",
     )
     parser.add_argument(
         "--resume",
@@ -110,12 +121,65 @@ def main() -> None:
         help="Restart fine-tuning at --unfreeze-epoch from the best checkpoint.",
     )
     args = parser.parse_args()
+    config = load_config("lightweight", args.config)
+    experiment = config.section("experiment")
+    dataset = config.section("dataset")
+    loader = config.section("loader")
+    args.epochs = args.epochs or int(experiment["epochs"])
+    args.batch_size = args.batch_size or int(experiment["batch_size"])
+    args.workers = (
+        args.workers if args.workers is not None else int(experiment["workers"])
+    )
+    args.seed = args.seed if args.seed is not None else int(experiment["seed"])
+    args.unfreeze_epoch = (
+        args.unfreeze_epoch
+        if args.unfreeze_epoch is not None
+        else int(experiment["unfreeze_epoch"])
+    )
+    args.unfreeze_blocks = (
+        args.unfreeze_blocks
+        if args.unfreeze_blocks is not None
+        else int(experiment["unfreeze_blocks"])
+    )
+    args.finetune_lr = (
+        args.finetune_lr
+        if args.finetune_lr is not None
+        else float(experiment["finetune_learning_rate"])
+    )
+    args.backbone = args.backbone or str(experiment["backbone"])
+    args.head_version = args.head_version or str(experiment["head_version"])
+    args.hard_weight = (
+        args.hard_weight
+        if args.hard_weight is not None
+        else float(experiment["hard_weight"])
+    )
+    args.temperature = (
+        args.temperature
+        if args.temperature is not None
+        else float(experiment["temperature"])
+    )
+    args.teacher = args.teacher or (
+        config.paths.checkpoint_dir / str(experiment["teacher_checkpoint"])
+    )
+    args.output = args.output or (
+        config.paths.checkpoint_dir / str(experiment["checkpoint"])
+    )
+    args.latest = args.latest or (
+        config.paths.checkpoint_dir / str(experiment["latest_checkpoint"])
+    )
     if args.restart_best and not args.output.exists():
         parser.error(f"--restart-best requires an existing checkpoint: {args.output}")
     seed_everything(args.seed)
 
     train_rows, val_rows, val_windows, train_loader, val_loader = make_loaders(
-        args.batch_size, args.workers
+        config.paths.data_dir,
+        str(dataset["manifest"]),
+        int(dataset["train_group_max"]),
+        float(dataset["validation_step_seconds"]),
+        float(dataset["fallback_video_fps"]),
+        args.batch_size,
+        args.workers,
+        bool(loader["pin_memory"]),
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     teacher = load_teacher(device, args.teacher)
@@ -165,8 +229,12 @@ def main() -> None:
     soft_loss = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.AdamW(
         [parameter for parameter in student.parameters() if parameter.requires_grad],
-        lr=args.finetune_lr if desired_blocks else 8e-4,
-        weight_decay=2e-4,
+        lr=(
+            args.finetune_lr
+            if desired_blocks
+            else float(experiment["head_learning_rate"])
+        ),
+        weight_decay=float(experiment["weight_decay"]),
     )
     if (
         resume_state is not None
@@ -186,7 +254,8 @@ def main() -> None:
     print(
         f"device={device} train_videos={len(train_rows)} val_videos={len(val_rows)} "
         f"val_windows={len(val_windows)} span={WINDOW_SPAN_SECONDS:.3f}s "
-        f"teacher={args.teacher} start_epoch={start_epoch} target_epochs={args.epochs}",
+        f"teacher={repository_relative(args.teacher)} "
+        f"start_epoch={start_epoch} target_epochs={args.epochs}",
         flush=True,
     )
     for epoch in range(start_epoch, args.epochs):
@@ -194,9 +263,13 @@ def main() -> None:
             student.set_trainable_stage(args.unfreeze_blocks)
             desired_blocks = args.unfreeze_blocks
             optimizer = torch.optim.AdamW(
-                [parameter for parameter in student.parameters() if parameter.requires_grad],
+                [
+                    parameter
+                    for parameter in student.parameters()
+                    if parameter.requires_grad
+                ],
                 lr=args.finetune_lr,
-                weight_decay=2e-4,
+                weight_decay=float(experiment["weight_decay"]),
             )
 
         student.train()
@@ -207,8 +280,9 @@ def main() -> None:
             clips = clips.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
-            with torch.no_grad(), torch.autocast(
-                device_type=device.type, enabled=device.type == "cuda"
+            with (
+                torch.no_grad(),
+                torch.autocast(device_type=device.type, enabled=device.type == "cuda"),
             ):
                 teacher_logits = teacher(clips)
             with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
@@ -296,7 +370,10 @@ def main() -> None:
             print("early_stop", flush=True)
             break
 
-    print(f"best_f1={best_f1:.4f} checkpoint={args.output}", flush=True)
+    print(
+        f"best_f1={best_f1:.4f} checkpoint={repository_relative(args.output)}",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

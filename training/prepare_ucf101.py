@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
@@ -10,43 +11,25 @@ import subprocess
 from pathlib import Path
 from urllib.request import ProxyHandler, build_opener
 
-ROOT = Path(__file__).resolve().parent
-DATA = ROOT / "data"
-META_URL = "https://huggingface.co/datasets/guyuchao/UCF101/resolve/main/trainval.json"
-SHARDS = [
-    "https://huggingface.co/datasets/guyuchao/UCF101/resolve/main/shard-00000.tar",
-    "https://huggingface.co/datasets/guyuchao/UCF101/resolve/main/shard-00001.tar",
-]
-CLASSES = {
-    "BrushingTeeth": 1,
-    "ApplyLipstick": 0,
-    "BlowDryHair": 0,
-    "HeadMassage": 0,
-    "ShavingBeard": 0,
-}
+from training.config import load_config, repository_relative
 
 
 def proxy_url() -> str | None:
-    explicit = os.environ.get("TRAINING_PROXY")
-    if explicit:
-        return explicit
-    route = subprocess.run(
-        ["sh", "-c", "ip route | awk '/default/ {print $3; exit}'"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
-    return f"http://{route}:7890" if route else None
+    """Return the project-specific override; standard proxy variables stay automatic."""
+
+    return os.environ.get("TRAINING_PROXY")
 
 
-def download_metadata() -> list[dict]:
-    DATA.mkdir(parents=True, exist_ok=True)
-    target = DATA / "trainval.json"
+def download_metadata(data_dir: Path, metadata_url: str) -> list[dict]:
+    data_dir.mkdir(parents=True, exist_ok=True)
+    target = data_dir / "trainval.json"
     if not target.exists():
         proxy = proxy_url()
-        opener = build_opener(ProxyHandler({"http": proxy, "https": proxy}) if proxy else ProxyHandler())
-        target.write_bytes(opener.open(META_URL).read())
-    return json.loads(target.read_text())
+        handler = (
+            ProxyHandler({"http": proxy, "https": proxy}) if proxy else ProxyHandler()
+        )
+        target.write_bytes(build_opener(handler).open(metadata_url).read())
+    return json.loads(target.read_text(encoding="utf-8"))
 
 
 def group_id(path: str) -> int:
@@ -57,21 +40,30 @@ def group_id(path: str) -> int:
 
 
 def main() -> None:
-    rows = download_metadata()
+    parser = argparse.ArgumentParser(description="Prepare the selected UCF101 classes.")
+    parser.add_argument("--config", type=Path)
+    args = parser.parse_args()
+    config = load_config(explicit_config=args.config)
+    download = config.section("download")
+    data_dir = config.paths.data_dir
+    classes = {name: int(label) for name, label in download["classes"].items()}
+    shards = [str(url) for url in download["shards"]]
+
+    rows = download_metadata(data_dir, str(download["metadata_url"]))
     selected = {
-        row["video_path"]: CLASSES[Path(row["video_path"]).parent.name]
+        row["video_path"]: classes[Path(row["video_path"]).parent.name]
         for row in rows
-        if Path(row["video_path"]).parent.name in CLASSES
+        if Path(row["video_path"]).parent.name in classes
     }
     archive_names = ["video/" + "/".join(Path(name).parts[3:]) for name in selected]
-    wanted = DATA / "wanted.txt"
+    wanted = data_dir / "wanted.txt"
     wanted.write_text("\n".join(archive_names) + "\n")
-    videos = DATA / "videos"
+    videos = data_dir / "videos"
     videos.mkdir(exist_ok=True)
 
     proxy = proxy_url()
-    for index, url in enumerate(SHARDS):
-        marker = DATA / f".shard-{index}.done"
+    for index, url in enumerate(shards):
+        marker = data_dir / f".shard-{index}.done"
         if marker.exists():
             continue
         curl = ["curl", "-L", "--fail", "--retry", "4"]
@@ -79,11 +71,17 @@ def main() -> None:
             curl += ["-x", proxy]
         curl += [url]
         tar = [
-            "tar", "-x", "-C", str(videos), "--strip-components=1",
-            "--wildcards", "--no-anchored", "--ignore-failed-read",
+            "tar",
+            "-x",
+            "-C",
+            str(videos),
+            "--strip-components=1",
+            "--wildcards",
+            "--no-anchored",
+            "--ignore-failed-read",
         ] + archive_names
         source = subprocess.Popen(curl, stdout=subprocess.PIPE)
-        extracted = subprocess.run(tar, stdin=source.stdout)
+        subprocess.run(tar, stdin=source.stdout)
         source.stdout.close()
         curl_status = source.wait()
         # Each shard contains only part of wanted.txt, so GNU tar returns 2 for
@@ -97,14 +95,22 @@ def main() -> None:
     for original, label in selected.items():
         path = videos / "/".join(Path(original).parts[3:])
         if path.exists():
-            manifest.append({
-                "path": str(path.relative_to(ROOT)),
-                "label": label,
-                "group": group_id(path.name),
-                "class": path.parent.name,
-            })
-    (DATA / "manifest.json").write_text(json.dumps(manifest, indent=2))
-    print(f"Prepared {len(manifest)} videos")
+            manifest.append(
+                {
+                    "path": path.relative_to(data_dir).as_posix(),
+                    "label": label,
+                    "group": group_id(path.name),
+                    "class": path.parent.name,
+                }
+            )
+    manifest_name = str(config.get("dataset.manifest", "manifest.json"))
+    (data_dir / manifest_name).write_text(
+        json.dumps(manifest, indent=2), encoding="utf-8"
+    )
+    print(
+        f"prepared={len(manifest)} data_dir={repository_relative(data_dir)} "
+        f"proxy={'custom' if proxy else 'environment-or-direct'}"
+    )
 
 
 if __name__ == "__main__":
