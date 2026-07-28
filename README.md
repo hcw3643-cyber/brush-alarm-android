@@ -90,8 +90,6 @@ Windows PowerShell：
 - `release`：正式功能包，不创建推理/闹钟诊断 CSV，也不显示导出入口。
 - Gradle 生成的 Release APK 默认未使用项目长期密钥签名；签名库绝不能提交到仓库。
   面向用户的 Release 只发布长期密钥签名的 universal APK，模型作为同一版本的独立资产。
-- 正式证书指纹、密钥保管边界和发布验证步骤见
-  [docs/SIGNING.md](docs/SIGNING.md)。
 
 ## 识别模型概要
 
@@ -114,7 +112,7 @@ Windows PowerShell：
 
 - 一般 Bug、设备兼容性和数值模型反馈请使用仓库 Issue 表单。
 - 不要把正脸视频、浴室画面、原始日志或其他个人信息上传到公开 Issue、PR 或仓库。
-- 志愿者视频征集尚未开放；开放前必须先启用私密上传、单独同意和删除流程。
+- 志愿者视频征集尚未开放；开放后只通过 README 公布的项目专用邮箱接收。
 - 代码贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 - 数据贡献原则见
   [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)。

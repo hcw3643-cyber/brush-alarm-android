@@ -72,3 +72,6 @@ app/src/main/assets/brush_classifier.onnx
 # Local AI/editor metadata
 .claude/
 .opencode/
+
+# Maintainer-only release notes and operating checklists
+.maintainer/

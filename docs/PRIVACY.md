@@ -27,9 +27,10 @@ Debug 测试包的应用名和包名与正式版区分，并可保存：
 
 ## 志愿者视频
 
-目前尚未开放视频征集。未来开放时，必须使用独立知情同意、私密传输、访问控制、
-保留期限和撤回流程。公开仓库、Issue、PR、普通附件或模型 Release 都不是可接受的
-原始视频传输位置。
+目前尚未开放视频征集。开放后只通过 README 公布的项目专用邮箱接收，并要求邮件正文
+包含明确授权确认。公开仓库、Issue、PR 和模型 Release 都不是可接受的原始视频传输
+位置。原始视频不会由 App 自动采集或上传。
 
-详见 [`DATA_CONTRIBUTION.md`](DATA_CONTRIBUTION.md)。如果未来版本增加联网、崩溃
-上报或数据收集，本文件和 App 内提示必须在发布前同步更新。
+详见 [`DATA_CONTRIBUTION.md`](DATA_CONTRIBUTION.md) 和可复制的
+[`DATA_CONTRIBUTION_EMAIL_TEMPLATE.md`](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md)。
+如果未来版本增加联网、崩溃上报或数据收集，本文件和 App 内提示必须在发布前同步更新。

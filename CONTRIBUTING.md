@@ -33,8 +33,9 @@
 
 ## 刷牙视频
 
-目前不接受通过 Issue、PR、GitHub 仓库或普通邮件发送刷牙视频。志愿者数据通道启用后，
-将使用单独的知情同意和私密上传流程；详见
+目前尚未公布项目专用邮箱，因此暂不接收刷牙视频。开放后只接受发送到 README 所列
+项目邮箱、并在邮件正文中包含明确授权确认的贡献；Issue、PR 和 GitHub 仓库始终不
+接收原始视频。详见
 [`docs/DATA_CONTRIBUTION.md`](docs/DATA_CONTRIBUTION.md)。
 
 ## Pull Request 检查
