@@ -23,7 +23,7 @@
 
 - 创建、编辑、启用、停用和删除闹钟
 - 周一至周日分别选择重复日期
-- 苹果风格的小时/分钟滚轮
+- 小时/分钟滚轮
 - 持续模式：闹铃持续播放，完成刷牙验证后停止
 - 舍友模式：允许暂时静音，未完成验证时每分钟复响
 - `AlarmManager` 精确闹钟、全屏通知、前台响铃服务和 CPU 唤醒锁
@@ -53,7 +53,6 @@
 稳定应用 ID 为 `io.github.hcw3643cyber.brushalarm`。此前使用
 `com.example.brushalarm` 的内部测试包不会被识别为同一个 App，闹钟配置也不会自动迁移。
 
-工程优先使用华为云、阿里云和腾讯云 Maven 镜像，并保留官方仓库作为回退。
 
 ### 2. 获取模型
 
@@ -64,7 +63,7 @@
 app/src/main/assets/brush_classifier.onnx
 ```
 
-仓库转为公开后可使用：
+可使用：
 
 ```bash
 ./scripts/fetch-model.sh
@@ -76,8 +75,7 @@ Windows PowerShell：
 .\scripts\fetch-model.ps1
 ```
 
-私有仓库审阅期间也可以从 `model-v1.0.0` Release 手工下载。模型来源、输入格式、
-指标和限制见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)。
+可以从 `model-v1.0.0` Release 手工下载。模型来源、输入格式、指标和限制见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)。
 
 ### 3. 构建
 
@@ -88,9 +86,6 @@ Windows PowerShell：
 
 - `debug`：独立测试包，版本名带 `-test`，包含数值日志和人工标签。
 - `release`：正式功能包，不创建推理/闹钟诊断 CSV，也不显示导出入口。
-- Gradle 生成的 Release APK 默认未使用项目长期密钥签名；签名库绝不能提交到仓库。
-  面向用户的 Release 只发布长期密钥签名的 universal APK，模型作为同一版本的独立资产。
-
 ## 识别模型概要
 
 输入为最近约两秒的动作窗口：

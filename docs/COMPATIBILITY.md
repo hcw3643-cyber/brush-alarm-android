@@ -54,3 +54,28 @@
 不同系统的设置项名称和入口会变化。App 只能跳转到系统或厂商可能相关的设置页，
 不能代替用户授权。若设备没有对应厂商页面，保持 Android 标准精确闹钟、通知、摄像头
 和电池优化设置即可。
+
+### vivo X300 / OriginOS 6 参考
+
+在维护者的测试设备上，需要为“刷牙闹钟”开启：
+
+- 自启动；
+- 锁屏显示；
+- 后台弹出界面；
+- 后台耗电管理选择“允许后台耗电”。
+
+以下截图只用于帮助定位 OriginOS 6 中的设置项。系统升级后入口和名称可能变化；其他
+品牌请寻找含义相近的自启动、锁屏显示、后台启动和电池限制设置。点击图片可查看原图。
+
+<p>
+  <a href="images/originos6/app-background-permissions.jpg">
+    <img src="images/originos6/app-background-permissions.jpg"
+         width="360"
+         alt="OriginOS 6 中刷牙闹钟的自启动、锁屏显示和后台弹出界面设置">
+  </a>
+  <a href="images/originos6/background-power-management.jpg">
+    <img src="images/originos6/background-power-management.jpg"
+         width="360"
+         alt="OriginOS 6 中刷牙闹钟的允许后台耗电设置">
+  </a>
+</p>
