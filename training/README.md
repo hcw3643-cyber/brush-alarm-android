@@ -38,6 +38,9 @@ UCF101 只用于基础模型。实际发布前必须加入手机前置摄像头�
 - `train.py`：训练与验证
 - `finetune_feedback.py`：混合公开困难负样本和经同意的本地真机正样本做第二阶段微调
 - `export_onnx.py`：导出 Android 端模型
+- `lightweight_model.py`：流式 MobileNetV3 + 时序差分头
+- `train_lightweight.py`：用当前 S3D 模型蒸馏轻量模型，并支持逐轮断点续训
+- `export_lightweight_onnx.py`：分别导出逐帧编码器和时序头
 - `analyze_inference_logs.py`：汇总 App 导出的带人工标签 CSV
 
 ## 运行
@@ -51,6 +54,8 @@ python training/train.py
 python training/finetune_feedback.py \
   --positive-video /path/to/consented-brushing-video.mp4
 python training/export_onnx.py
+python training/train_lightweight.py
+python training/export_lightweight_onnx.py
 python training/analyze_inference_logs.py /path/to/logs/
 ```
 
@@ -63,3 +68,7 @@ python training/analyze_inference_logs.py /path/to/logs/
 [`docs/MODEL_CARD.md`](../docs/MODEL_CARD.md) 为准；志愿者视频不得通过公开 Issue
 或 PR 提交，具体原则见
 [`docs/DATA_CONTRIBUTION.md`](../docs/DATA_CONTRIBUTION.md)。
+
+轻量模型的结构、同一验证集对照结果、计算量与当前限制见
+[`LIGHTWEIGHT_MODEL.md`](LIGHTWEIGHT_MODEL.md)。它目前是实验结果，没有替换 App
+正式使用的 S3D 模型。

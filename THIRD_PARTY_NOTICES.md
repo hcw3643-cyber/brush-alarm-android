@@ -18,7 +18,7 @@ GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数�
 | 组件 | 用途 | 许可证 | 来源 |
 |---|---|---|---|
 | PyTorch | 模型训练与导出 | BSD-3-Clause | https://github.com/pytorch/pytorch |
-| TorchVision | S3D 网络与预训练权重接口 | BSD-3-Clause（源码） | https://github.com/pytorch/vision |
+| TorchVision | S3D、MobileNetV3 网络与预训练权重接口 | BSD-3-Clause（源码） | https://github.com/pytorch/vision |
 | OpenCV | 视频解码与增强 | Apache-2.0 | https://github.com/opencv/opencv |
 | NumPy | 数值处理 | BSD-3-Clause | https://github.com/numpy/numpy |
 | ONNX | 模型格式与检查 | Apache-2.0 | https://github.com/onnx/onnx |
@@ -29,6 +29,8 @@ GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数�
 
 - TorchVision S3D Kinetics-400 V1：
   https://docs.pytorch.org/vision/main/models/generated/torchvision.models.video.s3d.html
+- 实验性流式模型使用的 TorchVision MobileNetV3 Large ImageNet-1K V2：
+  https://docs.pytorch.org/vision/main/models/generated/torchvision.models.mobilenet_v3_large.html
 - TorchVision 预训练模型许可提示：
   https://github.com/pytorch/vision#pre-trained-model-license
 - Kinetics 数据集下载与说明：
@@ -39,4 +41,6 @@ GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数�
   https://huggingface.co/datasets/guyuchao/UCF101
 
 Hugging Face 镜像未提供 Dataset Card 或明确许可证。项目只用它复现实验数据，不把
-镜像上传者视为 UCF101 权利人，也不再分发镜像中的原始视频。
+镜像上传者视为 UCF101 权利人，也不再分发镜像中的原始视频。实验性轻量模型同时
+使用 ImageNet-1K 预训练权重，并从当前 S3D 模型蒸馏，因此不会消除 S3D、Kinetics
+或 UCF101 的来源与许可边界。
