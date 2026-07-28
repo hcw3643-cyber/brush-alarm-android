@@ -36,6 +36,7 @@ GPL 已经覆盖的项目原创代码。
 - [ ] README 不含私人邮箱、文件路径或本机信息
 - [ ] 模型 Release 只有 ONNX、校验值和模型说明
 - [ ] 未上传 Debug/未签名 APK、视频、数据、日志、签名库或 checkpoint
+- [ ] 正式 APK 证书 SHA-256 与 `docs/SIGNING.md` 一致
 - [ ] 全部测试和 Release Lint 通过
 - [ ] 在至少一台真机重新验证熄屏、划后台、重启和刷牙流程
 

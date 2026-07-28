@@ -38,6 +38,7 @@ google-services.json
 *.aab
 *.apks
 *.idsig
+app/release/
 
 # Python and training outputs
 .venv-training/

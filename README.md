@@ -90,6 +90,8 @@ Windows PowerShell：
 - `release`：正式功能包，不创建推理/闹钟诊断 CSV，也不显示导出入口。
 - Gradle 生成的 Release APK 默认未使用项目长期密钥签名；签名库绝不能提交到仓库。
   面向用户的 Release 只发布长期密钥签名的 universal APK，模型作为同一版本的独立资产。
+- 正式证书指纹、密钥保管边界和发布验证步骤见
+  [docs/SIGNING.md](docs/SIGNING.md)。
 
 ## 识别模型概要
 
