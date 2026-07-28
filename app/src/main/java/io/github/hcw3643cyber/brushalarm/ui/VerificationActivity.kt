@@ -4,6 +4,7 @@
 package io.github.hcw3643cyber.brushalarm.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.app.KeyguardManager
@@ -305,6 +306,7 @@ class VerificationActivity : ComponentActivity() {
         runCatching { stopLockTask() }
     }
 
+    @SuppressLint("MissingSuperCall")
     @Deprecated("Back is disabled while the alarm is active")
     override fun onBackPressed() {
         hint = "完成刷牙验证后才能关闭"

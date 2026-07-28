@@ -1,0 +1,4 @@
+# Optional WSL2/Linux GPU runtime. Keep this separate so CPU-only contributors
+# do not download several gigabytes of NVIDIA libraries.
+-r requirements-movinet.txt
+tensorflow[and-cuda]==2.20.0

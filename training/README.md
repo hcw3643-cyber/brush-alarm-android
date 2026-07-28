@@ -1,5 +1,7 @@
 # 刷牙视频分类模型
 
+[English](README_EN.md) | 简体中文
+
 这里训练的不是画面抖动阈值，而是二分类时序视觉模型：
 
 - 正样本：`BrushingTeeth`
@@ -48,6 +50,7 @@ UCF101 只用于基础模型。实际发布前必须加入手机前置摄像头�
 - `train_lightweight.py`：用当前 S3D 模型蒸馏轻量模型，并支持逐轮断点续训
 - `export_lightweight_onnx.py`：分别导出逐帧编码器和时序头
 - `validate_movinet_a0.py`：恢复官方 A0 Stream 权重，验证二分类头训练和原生 TFLite 导出
+- `train_movinet_a0.py`：在完整 UCF split 上训练 A0 二分类头、执行视频级验证并导出 TFLite
 - `analyze_inference_logs.py`：汇总 App 导出的带人工标签 CSV
 
 ## 配置
@@ -113,9 +116,21 @@ python -m pip install -r training/requirements-movinet.txt
 python -m training.validate_movinet_a0
 ```
 
-验证结论、实际 TFLite 大小和限制见 [`MOVINET_A0.md`](MOVINET_A0.md)。该脚本只验证
-官方权重恢复、真实 clip 前向、二分类头反向、显式流状态、原生 TFLite 转换与数值
-一致性；一次训练步不是准确率实验。
+WSL2/Linux 如需使用 NVIDIA GPU，可改为安装：
+
+```bash
+python -m pip install -r training/requirements-movinet-gpu.txt
+```
+
+`validate_movinet_a0.py` 只验证官方权重恢复、真实 clip 前向、一次二分类头反向、显式
+流状态、原生 TFLite 转换与数值一致性；`train_movinet_a0.py` 才会使用完整固定 split
+训练、按视频选择门限，并对全部重叠窗口做最终评估：
+
+```bash
+python -m training.train_movinet_a0
+```
+
+验证结论、实际 TFLite 大小和限制见 [`MOVINET_A0.md`](MOVINET_A0.md)。
 
 训练数据、视频、日志、检查点和导出模型都被 `.gitignore` 排除，不能提交到仓库。
 正式发布模型时应使用独立 Release 资产并记录 SHA-256。模型来源、指标和限制以

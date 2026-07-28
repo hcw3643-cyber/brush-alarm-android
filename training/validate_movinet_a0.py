@@ -146,10 +146,11 @@ def build_streaming_deployment_model(
     experiment: dict,
     size: int,
     checkpoint_path: Path,
+    batch_size: int | None = 1,
 ):
     """Create the native-TFLite 2+1D graph with explicit stream-buffer states."""
 
-    input_specs = tf_keras.layers.InputSpec(shape=[1, 1, size, size, 3])
+    input_specs = tf_keras.layers.InputSpec(shape=[batch_size, 1, size, size, 3])
     backbone = movinet.Movinet(
         **model_options(experiment),
         input_specs=input_specs,
@@ -163,7 +164,7 @@ def build_streaming_deployment_model(
         input_specs={"image": input_specs},
         activation=str(experiment["activation"]),
     )
-    model.build([1, 1, size, size, 3])
+    model.build([batch_size, 1, size, size, 3])
     status = tf.train.Checkpoint(model=model).restore(str(checkpoint_path))
     status.assert_existing_objects_matched()
     status.expect_partial()

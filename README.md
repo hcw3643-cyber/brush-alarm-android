@@ -4,6 +4,8 @@
 
 # 刷牙闹钟
 
+[English](README_EN.md) | 简体中文
+
 一个只有完成刷牙动作验证后才会停止的 Android 闹钟。
 
 > [!IMPORTANT]
@@ -103,11 +105,18 @@ Windows PowerShell：
 原始训练视频。详见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md) 和
 [MODEL_LICENSE.md](MODEL_LICENSE.md)。
 
+MoViNet A0 已完成相同 UCF 划分上的训练、流式 TFLite 导出和数值一致性验证。它的
+视频级 F1 为 93.67%，接近当前 S3D 的 93.83%；理论计算量约低 65 倍，但尚未经过
+真机域验证，也尚未接入正式 App。详见
+[training/MOVINET_A0.md](training/MOVINET_A0.md)。
+
 ## 参与项目
 
 - 一般 Bug、设备兼容性和数值模型反馈请使用仓库 Issue 表单。
 - 不要把正脸视频、浴室画面、原始日志或其他个人信息上传到公开 Issue、PR 或仓库。
-- 志愿者视频征集尚未开放；开放后只通过 README 公布的项目专用邮箱接收。
+- 志愿者刷牙视频征集已开放，只通过项目邮箱
+  [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收；发送前必须阅读并在邮件中
+  明确接受数据贡献说明。
 - 代码贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 - 数据贡献原则见
   [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)。
@@ -122,6 +131,7 @@ Windows PowerShell：
 ├── docs/                架构、兼容性、模型、隐私和数据贡献文档
 ├── design/              Logo 源文件
 ├── .github/             Issue 表单
+├── README_EN.md         English README
 ├── LICENSE              GNU GPL v3.0 软件许可证
 ├── MODEL_LICENSE.md     模型权重许可边界
 └── THIRD_PARTY_NOTICES.md

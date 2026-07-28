@@ -1,5 +1,7 @@
 # 第三方组件与来源声明
 
+[English](THIRD_PARTY_NOTICES_EN.md) | 简体中文
+
 本文件是项目的依赖与来源索引。各项目的原始许可证文本具有最终效力；本项目的
 GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数据各自的许可条款。
 
@@ -48,4 +50,5 @@ Hugging Face 镜像未提供 Dataset Card 或明确许可证。项目只用它�
 镜像上传者视为 UCF101 权利人，也不再分发镜像中的原始视频。实验性轻量模型同时
 使用 ImageNet-1K 预训练权重，并从当前 S3D 模型蒸馏，因此不会消除 S3D、Kinetics
 或 UCF101 的来源与许可边界。MoViNet A0 验证使用 Kinetics-600 预训练权重，因此也
-不能消除 Kinetics 数据来源的许可边界；当前只记录可行性，不提交或发布 A0 权重。
+不能消除 Kinetics 数据来源的许可边界；仓库记录完整训练和验证方法，但不提交或发布
+A0 checkpoint、TFLite 权重或原始视频。

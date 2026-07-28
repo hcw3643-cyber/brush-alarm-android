@@ -1,5 +1,7 @@
 # 架构说明
 
+[English](en/ARCHITECTURE.md) | 简体中文
+
 ## 运行链路
 
 ```text

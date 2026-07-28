@@ -1,5 +1,7 @@
 # 模型卡：s3d-brush-2s-192-feedback-v1
 
+[English](en/MODEL_CARD.md) | 简体中文
+
 ## 概要
 
 这是用于刷牙闹钟的实验性二分类视频模型。它判断一个短时间窗口是否包含刷牙动作，
@@ -7,12 +9,14 @@
 
 - 文件：`brush_classifier.onnx`
 - 发布标签：`model-v1.0.0`
-- SHA-256：`60142360e01f211a81d80a70c6aa92ea132044c054496472eb5bf7201283b9eb`
-- 大小：32,060,906 字节
+- SHA-256：`505ab603651c0cd04aa06fafaef773b6a97f57a210308fdfa4752407af0e8eb5`
+- 大小：31,650,265 字节
 - 运行时：ONNX Runtime Mobile/Android，在手机端执行
 - 网络：TorchVision S3D，二分类输出
 
 模型文件不进入 Git 历史，发布时单独作为 GitHub Release 资产提供。
+2026-07-28 重新导出时清除了 PyTorch 导出器写入的本机调试路径元数据；权重和模型
+输入输出语义未变，PyTorch/ONNX Runtime 最大绝对误差为 `1.43e-6`。
 
 ## 输入与输出
 

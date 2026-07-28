@@ -1,5 +1,7 @@
 # 参与贡献
 
+[English](CONTRIBUTING_EN.md) | 简体中文
+
 感谢你帮助改进刷牙闹钟。除非另行书面说明，提交代码或文档贡献即表示你有权提交该
 内容，并同意它按仓库根目录 [LICENSE](LICENSE) 中的 GNU GPL v3.0 only
 （SPDX：`GPL-3.0-only`）提供。模型、训练数据和志愿者视频不适用这一默认条款，
@@ -33,9 +35,8 @@
 
 ## 刷牙视频
 
-目前尚未公布项目专用邮箱，因此暂不接收刷牙视频。开放后只接受发送到 README 所列
-项目邮箱、并在邮件正文中包含明确授权确认的贡献；Issue、PR 和 GitHub 仓库始终不
-接收原始视频。详见
+只接受发送到项目邮箱 [BrushAlarm@163.com](mailto:BrushAlarm@163.com)、并在邮件
+正文中包含明确授权确认的贡献；Issue、PR 和 GitHub 仓库始终不接收原始视频。详见
 [`docs/DATA_CONTRIBUTION.md`](docs/DATA_CONTRIBUTION.md)。
 
 ## Pull Request 检查

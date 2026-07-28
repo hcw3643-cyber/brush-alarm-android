@@ -1,5 +1,7 @@
 # 兼容性与测试范围
 
+[English](en/COMPATIBILITY.md) | 简体中文
+
 ## 当前结论
 
 本项目目前只在维护者的 vivo X300（Android 16 / OriginOS 6）上完成完整测试，

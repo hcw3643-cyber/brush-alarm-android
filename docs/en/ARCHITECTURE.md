@@ -1,0 +1,66 @@
+# Architecture
+
+English | [简体中文](../ARCHITECTURE.md)
+
+## Runtime flow
+
+```text
+Room alarm record
+  └─ AlarmScheduler / AlarmManager exact alarm
+       ├─ AlarmReceiver
+       ├─ Foreground ringing service + audio + WakeLock
+       └─ Full-screen notification / VerificationActivity
+            └─ CameraX front camera
+                 └─ BrushMotionAnalyzer
+                      ├─ Timestamp-based 8 fps sampling
+                      ├─ 16 RGB frames at 192×192 with normalization
+                      ├─ On-device ONNX Runtime inference every 0.5 s
+                      └─ BrushDecisionFilter
+                           └─ Stop service and schedule next alarm after success
+```
+
+## Alarm reliability
+
+Android `AlarmManager` schedules the alarm itself; no permanently running
+application process is required. After an alarm fires, a foreground service
+plays audio and holds a time-limited CPU wake lock. Boot, unlock, package
+upgrade, and Direct Boot receivers restore enabled alarms from the local
+database.
+
+Some vendors still require exact-alarm, autostart, background-launch,
+lock-screen-display, and background-power permissions. The first launch presents
+one permission guide, and the home-screen settings entry can reopen it. A system
+“Force stop” blocks all receivers and alarms until the user launches the app
+again; a normal third-party Android app cannot bypass that security boundary.
+
+## Recognition data flow
+
+CameraX callbacks retain only the frames required by the model and only in
+memory. Each frame is center-square-cropped, resized to 192×192, converted to
+RGB float values, and normalized with Kinetics statistics. The ONNX input is
+`[1, 16, 3, 192, 192]` in NTCHW layout; the graph transposes it to the NCTHW
+layout used by S3D.
+
+The model emits one logit, and the app applies sigmoid to obtain a score in
+`[0, 1]`. Camera capture and model execution are independently serialized so the
+UI is not blocked and one ONNX session is never invoked concurrently.
+
+Scores at or above 0.65 accumulate evidence using real elapsed time. Scores
+below 0.10 reduce evidence, while the middle band holds it. Verification passes
+after six seconds of accumulated high-confidence evidence.
+
+## Data and privacy
+
+Room stores alarm settings locally. Production builds save no camera frames,
+generate no inference/alarm CSV files, and contain no upload service. Test builds
+may generate numerical diagnostics and manual labels. Debug and Release use
+different application IDs and do not share data.
+
+## Key directories
+
+- `app/src/main/`: production runtime code and shared resources
+- `app/src/debug/`, `app/src/release/`: build-type-specific behavior
+- `app/src/test/`: local unit tests
+- `training/`: data preparation, training, calibration, and export
+- `docs/`: public architecture, compatibility, model, privacy, and data policy
+- `scripts/`: model download and public-tree audits
