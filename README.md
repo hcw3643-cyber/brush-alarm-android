@@ -46,14 +46,14 @@
 ## 下载 App
 
 前往
-[`v1.0.0` 发布页面](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.0)
+[`v1.0.1` 发布页面](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.1)
 下载安装包。
 
 ### 选择安装包
 
-- **推荐：**`BrushAlarm-v1.0.0-arm64-v8a.apk`
+- **推荐：**`BrushAlarm-v1.0.1-arm64-v8a.apk`
   适用于绝大多数近年的 Android 手机，安装包更小。
-- **兼容版：**`BrushAlarm-v1.0.0-universal.apk`
+- **兼容版：**`BrushAlarm-v1.0.1-universal.apk`
   如果推荐版本无法安装，或者不确定手机型号是否兼容，请选择此版本。
 
 ### 安装和初次使用

@@ -63,13 +63,13 @@ detects that the user is brushing their teeth.
 ## Download the app
 
 Download the installer from the
-[`v1.0.0` release page](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.0).
+[`v1.0.1` release page](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.1).
 
 ### Choose an APK
 
-- **Recommended:** `BrushAlarm-v1.0.0-arm64-v8a.apk`
+- **Recommended:** `BrushAlarm-v1.0.1-arm64-v8a.apk`
   Suitable for most recent Android phones and smaller in size.
-- **Compatibility version:** `BrushAlarm-v1.0.0-universal.apk`
+- **Compatibility version:** `BrushAlarm-v1.0.1-universal.apk`
   Use this version if the recommended APK cannot be installed or you are unsure
   whether your device is compatible.
 
