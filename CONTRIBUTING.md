@@ -1,6 +1,6 @@
 # Contributing
 
-English | [简体中文](CONTRIBUTING.zh-CN.md)
+English | [简体中文](docs/zh-CN/CONTRIBUTING.zh-CN.md)
 
 Participation is subject to the
 [Community Code of Conduct](CODE_OF_CONDUCT.md).
@@ -26,7 +26,7 @@ volunteer video, which require their own license and consent process.
    ./gradlew assembleDebug assembleRelease
    ```
 
-5. Model changes must also update `docs/MODEL_CARD.md` with the split, metrics,
+5. Model changes must also update `docs/en/MODEL_CARD.md` with the split, metrics,
    thresholds, hashes, and limitations.
 
 ## Bug and compatibility reports
@@ -49,7 +49,7 @@ Brushing video is accepted only at
 [BrushAlarm@163.com](mailto:BrushAlarm@163.com) and only with explicit consent
 in the email body. Raw video is never accepted through Issues, pull requests, or
 the Git repository. See
-[`docs/DATA_CONTRIBUTION.md`](docs/DATA_CONTRIBUTION.md).
+[`docs/en/DATA_CONTRIBUTION.md`](docs/en/DATA_CONTRIBUTION.md).
 
 ## Pull request checklist
 

@@ -1,6 +1,6 @@
 # 第三方组件与来源声明
 
-[English](THIRD_PARTY_NOTICES.md) | 简体中文
+[English](../../THIRD_PARTY_NOTICES.md) | 简体中文
 
 本文件是项目的依赖与来源索引。各项目的原始许可证文本具有最终效力；本项目的
 GNU GPL v3.0 only 条款不会替换第三方组件、模型权重或训练数据各自的许可条款。

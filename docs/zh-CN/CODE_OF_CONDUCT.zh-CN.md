@@ -1,6 +1,6 @@
 # 社区行为准则
 
-[English](CODE_OF_CONDUCT.md) | 简体中文
+[English](../../CODE_OF_CONDUCT.md) | 简体中文
 
 本项目欢迎不同经验、背景和身份的参与者。所有仓库 Issue、Pull Request、讨论和维护者
 指定的项目沟通渠道均应保持尊重、善意和与项目相关。

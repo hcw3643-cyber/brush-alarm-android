@@ -1,6 +1,6 @@
 # Brushing Video Contribution Email Template
 
-English | [简体中文](DATA_CONTRIBUTION_EMAIL_TEMPLATE.zh-CN.md)
+English | [简体中文](../zh-CN/DATA_CONTRIBUTION_EMAIL_TEMPLATE.zh-CN.md)
 
 > Recipient: [BrushAlarm@163.com](mailto:BrushAlarm@163.com)
 
@@ -14,7 +14,7 @@ right to submit it. I voluntarily allow Brush Alarm maintainer Leo Huang to
 store, view, crop, label, and use this video to train, validate, and improve the
 brushing-action model, and to publish model weights and aggregate metrics that
 do not contain the original video. I have read the contribution notice in
-docs/DATA_CONTRIBUTION.md.
+docs/en/DATA_CONTRIBUTION.md.
 
 Device model (optional):
 Android/vendor OS version (optional):

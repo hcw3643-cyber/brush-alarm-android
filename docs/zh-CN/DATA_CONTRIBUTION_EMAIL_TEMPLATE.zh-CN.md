@@ -1,6 +1,6 @@
 # 刷牙视频贡献邮件模板
 
-[English](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md) | 简体中文
+[English](../en/DATA_CONTRIBUTION_EMAIL_TEMPLATE.md) | 简体中文
 
 > 收件地址：[BrushAlarm@163.com](mailto:BrushAlarm@163.com)
 
@@ -12,7 +12,7 @@
 我已年满 18 周岁，是视频中的本人，并有权提交该视频。我自愿允许刷牙闹钟项目维护者
 Leo Huang 存储、查看、裁剪、标注和使用本次视频来训练、验证和改进刷牙动作模型，
 并发布不包含原始视频的模型权重和汇总指标。我已阅读
-docs/DATA_CONTRIBUTION.md 中的贡献说明。
+docs/zh-CN/DATA_CONTRIBUTION.zh-CN.md 中的贡献说明。
 
 设备型号（可选）：
 Android/系统版本（可选）：

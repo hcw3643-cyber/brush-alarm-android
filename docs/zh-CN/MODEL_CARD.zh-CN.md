@@ -1,6 +1,6 @@
 # 模型卡：s3d-brush-2s-192-feedback-v1
 
-[English](MODEL_CARD.md) | 简体中文
+[English](../en/MODEL_CARD.md) | 简体中文
 
 ## 概要
 
@@ -44,8 +44,8 @@ App 按时间戳从 CameraX 前置摄像头取样：
 UCF101 视频通过 Hugging Face 用户镜像 `guyuchao/UCF101` 获取。镜像不是 UCF101
 官方发布渠道，仓库没有发现它为原始视频另行授予许可证，因此本项目不再分发任何
 UCF101 原始视频，也不把镜像标记为“官方镜像”。完整来源和依赖许可见
-[`THIRD_PARTY_NOTICES.zh-CN.md`](../THIRD_PARTY_NOTICES.zh-CN.md) 与
-[`MODEL_LICENSE.zh-CN.md`](../MODEL_LICENSE.zh-CN.md)。
+[`THIRD_PARTY_NOTICES.zh-CN.md`](THIRD_PARTY_NOTICES.zh-CN.md) 与
+[`MODEL_LICENSE.zh-CN.md`](MODEL_LICENSE.zh-CN.md)。
 
 ## 训练与验证方法
 

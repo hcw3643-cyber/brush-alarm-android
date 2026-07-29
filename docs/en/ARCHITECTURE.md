@@ -1,6 +1,6 @@
 # Architecture
 
-English | [简体中文](ARCHITECTURE.zh-CN.md)
+English | [简体中文](../zh-CN/ARCHITECTURE.zh-CN.md)
 
 ## Runtime flow
 

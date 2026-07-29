@@ -1,6 +1,6 @@
 # 隐私说明
 
-[English](PRIVACY.md) | 简体中文
+[English](../en/PRIVACY.md) | 简体中文
 
 ## 正式版
 

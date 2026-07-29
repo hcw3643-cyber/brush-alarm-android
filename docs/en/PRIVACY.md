@@ -1,6 +1,6 @@
 # Privacy Notice
 
-English | [简体中文](PRIVACY.zh-CN.md)
+English | [简体中文](../zh-CN/PRIVACY.zh-CN.md)
 
 ## Production build
 

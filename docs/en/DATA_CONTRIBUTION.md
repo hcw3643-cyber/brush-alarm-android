@@ -1,6 +1,6 @@
 # Brushing Video Contribution Notice
 
-English | [简体中文](DATA_CONTRIBUTION.zh-CN.md)
+English | [简体中文](../zh-CN/DATA_CONTRIBUTION.zh-CN.md)
 
 > Current status: **collection is open.** Video is accepted only through
 > [BrushAlarm@163.com](mailto:BrushAlarm@163.com).

@@ -134,9 +134,9 @@ python -m training.train_movinet_a0
 
 训练数据、视频、日志、检查点和导出模型都被 `.gitignore` 排除，不能提交到仓库。
 正式发布模型时应使用独立 Release 资产并记录 SHA-256。模型来源、指标和限制以
-[`docs/MODEL_CARD.zh-CN.md`](../docs/MODEL_CARD.zh-CN.md) 为准；志愿者视频不得通过公开 Issue
+[`docs/zh-CN/MODEL_CARD.zh-CN.md`](../docs/zh-CN/MODEL_CARD.zh-CN.md) 为准；志愿者视频不得通过公开 Issue
 或 PR 提交，具体原则见
-[`docs/DATA_CONTRIBUTION.zh-CN.md`](../docs/DATA_CONTRIBUTION.zh-CN.md)。
+[`docs/zh-CN/DATA_CONTRIBUTION.zh-CN.md`](../docs/zh-CN/DATA_CONTRIBUTION.zh-CN.md)。
 
 轻量模型的结构、同一验证集对照结果、计算量与当前限制见
 [`LIGHTWEIGHT_MODEL.zh-CN.md`](LIGHTWEIGHT_MODEL.zh-CN.md)。它目前是实验结果，没有替换 App

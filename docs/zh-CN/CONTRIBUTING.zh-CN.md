@@ -1,11 +1,11 @@
 # 参与贡献
 
-[English](CONTRIBUTING.md) | 简体中文
+[English](../../CONTRIBUTING.md) | 简体中文
 
 参与即表示同意遵守 [社区行为准则](CODE_OF_CONDUCT.zh-CN.md)。
 
 感谢你帮助改进刷牙闹钟。除非另行书面说明，提交代码或文档贡献即表示你有权提交该
-内容，并同意它按仓库根目录 [LICENSE](LICENSE) 中的 GNU GPL v3.0 only
+内容，并同意它按仓库根目录 [LICENSE](../../LICENSE) 中的 GNU GPL v3.0 only
 （SPDX：`GPL-3.0-only`）提供。模型、训练数据和志愿者视频不适用这一默认条款，
 必须遵循各自的许可与同意流程。
 
@@ -21,7 +21,7 @@
    ./gradlew assembleDebug assembleRelease
    ```
 
-5. 模型改动需同时更新 `docs/MODEL_CARD.md`，写明数据划分、指标、阈值、哈希和局限。
+5. 模型改动需同时更新 `docs/zh-CN/MODEL_CARD.zh-CN.md`，写明数据划分、指标、阈值、哈希和局限。
 
 ## Bug 与兼容性反馈
 
@@ -39,7 +39,7 @@
 
 只接受发送到项目邮箱 [BrushAlarm@163.com](mailto:BrushAlarm@163.com)、并在邮件
 正文中包含明确授权确认的贡献；Issue、PR 和 GitHub 仓库始终不接收原始视频。详见
-[`docs/DATA_CONTRIBUTION.zh-CN.md`](docs/DATA_CONTRIBUTION.zh-CN.md)。
+[`DATA_CONTRIBUTION.zh-CN.md`](DATA_CONTRIBUTION.zh-CN.md)。
 
 ## Pull Request 检查
 

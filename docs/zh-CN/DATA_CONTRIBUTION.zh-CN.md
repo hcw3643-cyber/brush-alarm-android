@@ -1,6 +1,6 @@
 # 刷牙视频贡献说明
 
-[English](DATA_CONTRIBUTION.md) | 简体中文
+[English](../en/DATA_CONTRIBUTION.md) | 简体中文
 
 > 当前状态：**已开放征集。** 只通过
 > [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收视频。

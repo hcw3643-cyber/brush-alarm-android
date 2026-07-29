@@ -1,6 +1,6 @@
 # Compatibility and Test Scope
 
-English | [简体中文](COMPATIBILITY.zh-CN.md)
+English | [简体中文](../zh-CN/COMPATIBILITY.zh-CN.md)
 
 ## Current conclusion
 

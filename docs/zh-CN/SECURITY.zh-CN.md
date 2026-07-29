@@ -1,6 +1,6 @@
 # 安全政策
 
-[English](SECURITY.md) | 简体中文
+[English](../../SECURITY.md) | 简体中文
 
 ## 支持范围
 

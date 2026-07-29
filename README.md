@@ -4,7 +4,7 @@
 
 # Brush Alarm
 
-English | [简体中文](README.zh-CN.md)
+English | [简体中文](docs/zh-CN/README.zh-CN.md)
 
 An Android alarm clock that stops only after on-device video verification
 detects that the user is brushing their teeth.
@@ -57,7 +57,7 @@ detects that the user is brushing their teeth.
   provide Device Owner / kiosk-level lock-down.
 - The current model has limited user and real-device coverage. It may miss
   brushing with unfamiliar faces, toothbrushes, angles, or lighting.
-- See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the current compatibility
+- See [docs/en/COMPATIBILITY.md](docs/en/COMPATIBILITY.md) for the current compatibility
   scope and test method.
 
 ## Download the app
@@ -125,7 +125,7 @@ On Windows PowerShell:
 ```
 
 It can also be downloaded manually from the `model-v1.0.1` Release. See
-[docs/MODEL_CARD.md](docs/MODEL_CARD.md) for provenance, input format, metrics,
+[docs/en/MODEL_CARD.md](docs/en/MODEL_CARD.md) for provenance, input format, metrics,
 and limitations.
 
 ### 3. Build
@@ -166,7 +166,7 @@ one maintainer-consented phone recording. The third-party dataset terms are not
 fully explicit. The model is therefore released as a separate experimental
 asset, does not claim redistribution rights to UCF101 source videos, and
 contains no source training recordings. See
-[docs/MODEL_CARD.md](docs/MODEL_CARD.md) and
+[docs/en/MODEL_CARD.md](docs/en/MODEL_CARD.md) and
 [MODEL_LICENSE.md](MODEL_LICENSE.md).
 
 MoViNet A0 has completed training on the same UCF split, streaming TFLite
@@ -187,7 +187,7 @@ phone-domain validation and has not replaced the production model. See
 - Code contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Community participation: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Data contribution principles:
-  [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)
+  [docs/en/DATA_CONTRIBUTION.md](docs/en/DATA_CONTRIBUTION.md)
 
 ## Repository layout
 
@@ -196,17 +196,17 @@ phone-domain validation and has not replaced the production model. See
 ├── app/                 Android application, resources, and tests
 ├── training/            Training, calibration, and model export code
 ├── scripts/             Model download and pre-release audit scripts
-├── docs/                Architecture, compatibility, model, privacy, and data docs
+├── docs/en/             English project documentation
+├── docs/zh-CN/          Simplified Chinese documentation
 ├── design/              Logo source
 ├── .github/             Issue forms
 ├── README.md            English README
-├── README.zh-CN.md      Chinese README
 ├── LICENSE              GNU GPL v3.0 software license
 ├── MODEL_LICENSE.md     Model-weight licensing boundary
 └── THIRD_PARTY_NOTICES.md
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed data flow and
+See [docs/en/ARCHITECTURE.md](docs/en/ARCHITECTURE.md) for the detailed data flow and
 component responsibilities.
 
 ## Privacy and security
@@ -214,7 +214,7 @@ component responsibilities.
 The production build analyzes camera frames only in device memory and does not
 save or upload them. Test-build logs contain numerical model output, timestamps,
 and device information but no image, video, or audio data; they should still be
-reviewed manually before sharing. See [docs/PRIVACY.md](docs/PRIVACY.md),
+reviewed manually before sharing. See [docs/en/PRIVACY.md](docs/en/PRIVACY.md),
 and follow [SECURITY.md](SECURITY.md) for security reports.
 
 ## Licensing

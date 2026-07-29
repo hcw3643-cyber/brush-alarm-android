@@ -1,6 +1,6 @@
 # Community Code of Conduct
 
-English | [简体中文](CODE_OF_CONDUCT.zh-CN.md)
+English | [简体中文](docs/zh-CN/CODE_OF_CONDUCT.zh-CN.md)
 
 This project welcomes contributors of different experience levels,
 backgrounds, and identities. All repository Issues, pull requests, discussions,

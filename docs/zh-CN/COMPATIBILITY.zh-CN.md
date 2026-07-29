@@ -1,6 +1,6 @@
 # 兼容性与测试范围
 
-[English](COMPATIBILITY.md) | 简体中文
+[English](../en/COMPATIBILITY.md) | 简体中文
 
 ## 当前结论
 
@@ -70,13 +70,13 @@
 品牌请寻找含义相近的自启动、锁屏显示、后台启动和电池限制设置。点击图片可查看原图。
 
 <p>
-  <a href="images/originos6/app-background-permissions.jpg">
-    <img src="images/originos6/app-background-permissions.jpg"
+  <a href="../images/originos6/app-background-permissions.jpg">
+    <img src="../images/originos6/app-background-permissions.jpg"
          width="360"
          alt="OriginOS 6 中刷牙闹钟的自启动、锁屏显示和后台弹出界面设置">
   </a>
-  <a href="images/originos6/background-power-management.jpg">
-    <img src="images/originos6/background-power-management.jpg"
+  <a href="../images/originos6/background-power-management.jpg">
+    <img src="../images/originos6/background-power-management.jpg"
          width="360"
          alt="OriginOS 6 中刷牙闹钟的允许后台耗电设置">
   </a>

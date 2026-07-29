@@ -1,6 +1,6 @@
 # Third-Party Components and Provenance
 
-English | [简体中文](THIRD_PARTY_NOTICES.zh-CN.md)
+English | [简体中文](docs/zh-CN/THIRD_PARTY_NOTICES.zh-CN.md)
 
 This file indexes project dependencies and provenance. The original license text
 of each upstream project controls. GNU GPL v3.0 only for this project does not

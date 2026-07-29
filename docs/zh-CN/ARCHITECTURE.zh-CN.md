@@ -1,6 +1,6 @@
 # 架构说明
 
-[English](ARCHITECTURE.md) | 简体中文
+[English](../en/ARCHITECTURE.md) | 简体中文
 
 ## 运行链路
 

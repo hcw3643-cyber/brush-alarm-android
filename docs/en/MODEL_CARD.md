@@ -1,6 +1,6 @@
 # Model Card: s3d-brush-2s-192-feedback-v1
 
-English | [简体中文](MODEL_CARD.zh-CN.md)
+English | [简体中文](../zh-CN/MODEL_CARD.zh-CN.md)
 
 ## Summary
 
@@ -52,8 +52,8 @@ UCF101 video is obtained through the Hugging Face user mirror
 `guyuchao/UCF101`. It is not an official UCF101 distribution channel and
 provides no separate license for the source video. The project redistributes no
 UCF101 video and does not call the mirror official. See
-[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and
-[MODEL_LICENSE.md](../MODEL_LICENSE.md).
+[THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) and
+[MODEL_LICENSE.md](../../MODEL_LICENSE.md).
 
 ## Training and validation
 

@@ -156,9 +156,9 @@ See [MOVINET_A0.md](MOVINET_A0.md) for measured results and limitations.
 Training data, video, logs, checkpoints, and exported models are ignored and
 must not be committed. Publish an approved model only as a separate Release
 asset with a recorded SHA-256. Model provenance, metrics, and limitations are
-defined in [the English model card](../docs/MODEL_CARD.md). Volunteer video
+defined in [the English model card](../docs/en/MODEL_CARD.md). Volunteer video
 must not be submitted through a public Issue or pull request; see the
-[data contribution notice](../docs/DATA_CONTRIBUTION.md).
+[data contribution notice](../docs/en/DATA_CONTRIBUTION.md).
 
 The experimental MobileNetV3 comparison is documented in
 [LIGHTWEIGHT_MODEL.md](LIGHTWEIGHT_MODEL.md). It has not replaced the
