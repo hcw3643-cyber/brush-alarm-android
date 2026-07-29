@@ -1,52 +1,67 @@
-# 刷牙视频贡献说明
+# Brushing Video Contribution Notice
 
-[English](en/DATA_CONTRIBUTION.md) | 简体中文
+English | [简体中文](DATA_CONTRIBUTION.zh-CN.md)
 
-> 当前状态：**已开放征集。** 只通过
-> [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收视频。
+> Current status: **collection is open.** Video is accepted only through
+> [BrushAlarm@163.com](mailto:BrushAlarm@163.com).
 
-刷牙视频可能拍到正脸、声音和居住环境。请不要把原始视频上传到公开 Issue、PR、
-GitHub 仓库或 Release，只通过上述项目邮箱提交。
+Brushing video may capture an identifiable face, audio, and living environment.
+Never upload raw video to a public Issue, pull request, Git repository, or
+Release. Submit only through the project email address above.
 
-## 可以提交什么
+## What may be submitted
 
-- 贡献者必须年满 18 周岁，并且是视频中唯一可识别的人；
-- 只提交自己拍摄并有权授权的视频；
-- 尽量使用普通房间和干净背景，避免拍到浴室、镜子、地址、证件、药物和私人物品；
-- 建议关闭录音；不要出现未成年人或没有同意的旁人；
-- 可以提交真实刷牙片段，也可以提交牙刷靠近嘴边、停止刷牙等容易混淆的负样本；
-- 不要为了采集数据做危险或引起身体不适的动作。
+- The contributor must be at least 18 and the only identifiable person shown.
+- Submit only self-recorded video that you have the right to authorize.
+- Prefer an ordinary room and clean background. Avoid bathrooms, mirrors,
+  addresses, identity documents, medication, and private belongings.
+- Disable audio when possible. Do not show minors or non-consenting bystanders.
+- Real brushing clips and confusing negatives such as holding a toothbrush near
+  the mouth or stopping the action are both useful.
+- Never perform dangerous or physically uncomfortable actions for data capture.
 
-## 邮件提交方式
+## Email submission
 
-发送到 `BrushAlarm@163.com`，邮件主题写为“刷牙闹钟数据贡献”，正文复制并保留下列
-确认：
+Send to `BrushAlarm@163.com`, use the subject “Brush Alarm data contribution,”
+and retain the following confirmation in the body:
 
-> 我已年满 18 周岁，是视频中的本人，并有权提交该视频。我自愿允许刷牙闹钟项目维护者
-> Leo Huang 存储、查看、裁剪、标注和使用本次视频来训练、验证和改进刷牙动作模型，
-> 并发布不包含原始视频的模型权重和汇总指标。我已阅读本贡献说明。
+> I am at least 18 years old, I am the person shown in the video, and I have the
+> right to submit it. I voluntarily allow Brush Alarm maintainer Leo Huang to
+> store, view, crop, label, and use this video to train, validate, and improve
+> the brushing-action model, and to publish model weights and aggregate metrics
+> that do not contain the original video. I have read this contribution notice.
 
-仅仅发送附件、没有上述或含义相同的明确确认，不视为已接受贡献。软件许可证不自动
-授权维护者使用视频。可直接使用
-[`DATA_CONTRIBUTION_EMAIL_TEMPLATE.md`](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md)。
+An attachment without that or equivalent explicit confirmation is not accepted.
+The software license does not grant permission to use a video. A copyable
+template is available in
+[`DATA_CONTRIBUTION_EMAIL_TEMPLATE.md`](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md).
 
-## 视频会怎样处理
+## How video is handled
 
-- 原始视频只用于本项目的刷牙动作模型训练、验证和改进；
-- 原始视频不会进入 Git、Release 或公开数据集，也不会主动提供给无关第三方；
-- 邮件传输和邮箱存储会经过 163.com 邮件服务商，并受其服务和隐私条款约束；
-- 项目可以公开训练得到的模型权重、代码和不含个人身份的汇总结果；
-- 维护者会采取合理的账户和本地存储安全措施，但互联网传输和电子存储无法承诺绝对
-  不发生安全事件；
-- 同一贡献者的数据只会分配到训练、验证、测试三者中的一组，避免评估结果失真。
-- 当前不承诺固定的最长保存期限；维护者会在模型训练、验证和必要复核不再需要原始
-  视频时删除。贡献者在此之前可按下方方式请求删除。
+- Original video is used only to train, validate, and improve this project's
+  brushing-action model.
+- It does not enter Git, Releases, or a public dataset and is not intentionally
+  provided to unrelated third parties.
+- Email transport and mailbox storage use the 163.com email provider and remain
+  subject to that provider's service and privacy terms.
+- The project may publish trained weights, code, and non-identifying aggregate
+  results.
+- Reasonable account and local-storage security measures are used, but internet
+  transmission and electronic storage cannot guarantee zero security incidents.
+- All data from one contributor stays in exactly one of train, validation, or
+  test, preventing identity leakage across evaluation splits.
+- No fixed maximum retention period is promised. The maintainer deletes original
+  video when it is no longer needed for model training, validation, and necessary
+  review. Until then, the contributor may request deletion as described below.
 
-## 撤回
+## Withdrawal
 
-贡献者可用原发送邮箱联系项目专用邮箱，请求删除维护者仍保存的原始视频。维护者会在
-合理时间内确认并停止后续使用。若视频已用于训练并且模型已经公开，原始文件仍可删除，
-但已经公开的历史模型和他人下载的副本无法可靠追回，也无法保证消除单个样本对模型的
-统计影响。
+A contributor may write from the original sending address to request deletion of
+original video still retained by the maintainer. The maintainer will acknowledge
+the request and stop future use within a reasonable time. If a model trained on
+the video has already been published, the original can still be deleted, but
+historical models and copies downloaded by others cannot be reliably recalled,
+and the statistical influence of one sample cannot be guaranteed to disappear.
 
-本说明不是软件许可证，也不要求贡献者把原始视频公开。
+This notice is not a software license and does not require contributors to make
+raw video public.

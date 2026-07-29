@@ -1,83 +1,89 @@
-# 实验性流式轻量模型
+# Experimental Lightweight Streaming Model
 
-[English](LIGHTWEIGHT_MODEL_EN.md) | 简体中文
+English | [简体中文](LIGHTWEIGHT_MODEL.zh-CN.md)
 
-## 状态
+## Status
 
-本实验用于验证能否降低手机端持续刷牙识别的计算量。目前代码、训练断点机制和
-ONNX 导出已完成，但模型**没有接入正式 App，也不应替换当前 S3D 模型**。主要原因
-是固定验证集 F1 仍明显低于 S3D，且分数尚未针对 App 的 `0.65` 门限重新标定。
+This experiment tests whether continuous brushing recognition can use less
+mobile compute. Training, checkpoints, and ONNX export are implemented, but the
+model **is not integrated into the production app and must not replace S3D**.
+Its fixed-split F1 remains substantially lower and its output is not calibrated
+for the app's 0.65 threshold.
 
-## 结构
+## Architecture
 
-- 输入仍为 16 帧、8 fps、192×192 RGB，覆盖 1.875 秒；
-- MobileNetV3 Large 将每个新采样帧编码为 192 维向量；
-- App 设计上只需将新向量放入 16 项环形缓冲区，同一帧不重复编码；
-- 时序头使用深度可分离一维卷积，并汇总相邻向量差分的均值和标准差；
-- 训练损失由 70% 真实标签 BCE 和 30% S3D 教师蒸馏损失组成；
-- 前四轮冻结图像编码器，之后固定 BatchNorm 统计量并微调最后三个 block；
-- 部署时分别使用逐帧编码器和时序头两个 ONNX 文件。
+- 16 frames at 8 fps and 192×192 RGB, spanning 1.875 seconds
+- MobileNetV3 Large encodes each new frame into a 192-dimensional embedding
+- A 16-item ring buffer would avoid re-encoding overlapping frames in the app
+- A depthwise-separable temporal head summarizes embeddings plus the mean and
+  standard deviation of adjacent embedding differences
+- Loss combines 70% hard-label BCE and 30% S3D teacher distillation
+- The encoder is frozen for four epochs, then its final three blocks are
+  fine-tuned with frozen BatchNorm statistics
+- Deployment uses separate frame-encoder and temporal-head ONNX files
 
-显式差分的作用是让分类头直接看到动作变化，降低只根据“人脸、手或牙刷出现在嘴边”
-等静态外观判断的风险。
+Explicit differences expose motion to the classifier and reduce reliance on
+static cues such as a face, hand, or toothbrush merely appearing near the mouth.
 
-## 固定验证集结果
+## Fixed validation split
 
-所有结果使用相同的 UCF101 group 划分：group 19 及以后只用于验证；每 0.5 秒生成
-重叠窗口，视频级指标使用每个原视频所有窗口分数的中位数，每个原视频只计一次。
+All models use UCF101 groups 19+ for validation, overlapping windows every
+0.5 seconds, and one median score per source video:
 
-| 模型 | 参数量 | Accuracy | Precision | Recall | F1 | 最佳门限 | 窗口 F1 |
+| Model | Parameters | Accuracy | Precision | Recall | F1 | Best threshold | Window F1 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 当前 S3D + 真机域适配 | 约 790 万 | 97.47% | 95.00% | 92.68% | 93.83% | 0.27 | 91.32% |
-| MobileNetV3 Small + 聚合头 | 约 113 万 | 81.82% | 54.24% | 78.05% | 64.00% | 0.89 | 58.07% |
-| MobileNetV3 Large + 聚合头 | 约 325 万 | 85.35% | 60.34% | 85.37% | 70.71% | 0.07 | 72.28% |
-| MobileNetV3 Large + 差分头 | 3344050 | 88.89% | 69.39% | 82.93% | **75.56%** | 0.09 | 72.89% |
+| Current S3D + phone adaptation | ~7.9M | 97.47% | 95.00% | 92.68% | 93.83% | 0.27 | 91.32% |
+| MobileNetV3 Small + pooled head | ~1.13M | 81.82% | 54.24% | 78.05% | 64.00% | 0.89 | 58.07% |
+| MobileNetV3 Large + pooled head | ~3.25M | 85.35% | 60.34% | 85.37% | 70.71% | 0.07 | 72.28% |
+| MobileNetV3 Large + motion head | 3,344,050 | 88.89% | 69.39% | 82.93% | **75.56%** | 0.09 | 72.89% |
 
-这些数字只适合比较本仓库中的实验，不代表真实浴室、不同用户或不同手机上的通过率。
-轻量模型的最佳门限为 0.09，在 0.70 门限下视频级 precision/recall 仅为
-60.87%/34.15%，所以不能直接沿用正式 App 的 0.65 门限。
+These results compare repository experiments, not real bathrooms, users, or
+phones. The lightweight model's best threshold is 0.09. At 0.70, its
+video-level precision and recall are only 60.87% and 34.15%, so it cannot
+directly reuse the production app's 0.65 threshold.
 
-## 导出与计算量
+## Export and compute
 
-最佳差分头模型导出结果：
+- `brush_frame_encoder.onnx`: 12,612,510 bytes, SHA-256
+  `769cbb084f21248c0ea3c735cca0329b57e12dd61be6172b6a032125f6f04206`
+- `brush_temporal_head.onnx`: 756,061 bytes, SHA-256
+  `7d93297f43a10e55a6eadd72d7af581b5cc37246b3c03a751145589eee46ea2f`
+- PyTorch/ONNX Runtime maximum absolute error below `1e-6`
+- About `1.27 GMAC/s` at 8 fps plus two temporal-head runs per second, versus
+  about `26.4 GMAC/s` for overlapping S3D; roughly 20× fewer multiply-adds
 
-- `brush_frame_encoder.onnx`：12612510 bytes，
-  SHA-256 `769cbb084f21248c0ea3c735cca0329b57e12dd61be6172b6a032125f6f04206`；
-- `brush_temporal_head.onnx`：756061 bytes，
-  SHA-256 `7d93297f43a10e55a6eadd72d7af581b5cc37246b3c03a751145589eee46ea2f`；
-- ONNX Runtime 与 PyTorch 最大绝对误差均小于 `1e-6`；
-- 8 fps 编码、每秒运行两次时序头时约为 `1.27 GMAC/s`，当前 S3D 重叠窗口方案约为
-  `26.4 GMAC/s`，理论乘加量约降低 20 倍。
+WSL x86 ONNX Runtime measured about 5.25 ms/frame with one thread and
+3.17 ms/frame with four. These are not Android latency or power guarantees.
 
-WSL x86 CPU 上的 ONNX Runtime 参考结果为单线程约 5.25 ms/帧、四线程约
-3.17 ms/帧；这不是 Android 手机基准，不能用于承诺具体设备速度或耗电。
+## Reproduction
 
-## 复现
-
-先按 [`README.md`](README.md) 准备数据和 Python 环境，并确保
-`training/checkpoints/best-feedback-2s-192.pt` 存在：
+After preparing the environment and S3D teacher as described in
+[README.md](README.md), make sure
+`training/checkpoints/best-feedback-2s-192.pt` exists:
 
 ```bash
 python -m training.train_lightweight
 python -m training.export_lightweight_onnx
 ```
 
-训练脚本每轮写入 `latest-lightweight-large-motion-2s-192.pt`，中断后可续训：
+The training script writes `latest-lightweight-large-motion-2s-192.pt` after
+each epoch. Resume an interrupted run with:
 
 ```bash
 python -m training.train_lightweight --resume
 ```
 
-检查点、数据和导出的 ONNX 均被 `.gitignore` 排除。若将来单独发布权重，应更新模型
-卡、SHA-256 和实机指标，并继续适用根目录 `MODEL_LICENSE.md` 与
-`THIRD_PARTY_NOTICES.md` 的来源限制。
+Checkpoints, datasets, and exported ONNX files are excluded by `.gitignore`.
+Any future standalone weight release must update the model card, SHA-256
+hashes, and device results, and remains subject to the provenance restrictions
+in the root `MODEL_LICENSE.md` and `THIRD_PARTY_NOTICES.md`.
 
-## 下一步
+## Next steps
 
-在考虑替换正式模型前，至少需要：
-
-1. 加入多位贡献者的真机刷牙、停止动作和嘴边相似动作视频；
-2. 按贡献者隔离训练、标定和测试集；
-3. 在独立标定集上确定输出校准和 App 门限；
-4. 在目标 Android 设备上测量端到端延迟、温升和耗电；
-5. 确认准确率达到可接受水平后，再实现环形特征缓存和双 ONNX Session 接入。
+1. Add contributor-isolated phone positives, stopped actions, and confusing
+   mouth-area negatives.
+2. Separate train, calibration, and test by contributor.
+3. Calibrate output and app thresholds on an independent calibration set.
+4. Measure end-to-end latency, thermal behavior, and battery use on Android.
+5. Only after acceptable accuracy, implement the feature ring buffer and two
+   ONNX sessions.

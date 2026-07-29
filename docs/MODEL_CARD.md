@@ -1,87 +1,106 @@
-# 模型卡：s3d-brush-2s-192-feedback-v1
+# Model Card: s3d-brush-2s-192-feedback-v1
 
-[English](en/MODEL_CARD.md) | 简体中文
+English | [简体中文](MODEL_CARD.zh-CN.md)
 
-## 概要
+## Summary
 
-这是用于刷牙闹钟的实验性二分类视频模型。它判断一个短时间窗口是否包含刷牙动作，
-不做人脸识别、身份识别、牙齿健康诊断或医疗评估。
+This is an experimental binary video classifier for Brush Alarm. It decides
+whether a short window contains a brushing action. It does not perform face or
+identity recognition, dental diagnosis, or medical assessment.
 
-- 文件：`brush_classifier.onnx`
-- 发布标签：`model-v1.0.1`
-- SHA-256：`505ab603651c0cd04aa06fafaef773b6a97f57a210308fdfa4752407af0e8eb5`
-- 大小：31,650,265 字节
-- 运行时：ONNX Runtime Mobile/Android，在手机端执行
-- 网络：TorchVision S3D，二分类输出
+- File: `brush_classifier.onnx`
+- Release tag: `model-v1.0.1`
+- SHA-256: `505ab603651c0cd04aa06fafaef773b6a97f57a210308fdfa4752407af0e8eb5`
+- Size: 31,650,265 bytes
+- Runtime: ONNX Runtime Mobile/Android, executed on device
+- Network: TorchVision S3D with one binary logit
 
-模型文件不进入 Git 历史，发布时单独作为 GitHub Release 资产提供。
-2026-07-28 重新导出时清除了 PyTorch 导出器写入的本机调试路径元数据；权重和模型
-输入输出语义未变，PyTorch/ONNX Runtime 最大绝对误差为 `1.43e-6`。
+The model file is excluded from Git history and distributed as a separate GitHub
+Release asset.
 
-## 输入与输出
+The 2026-07-28 re-export removes machine-local debug-path metadata written by the
+PyTorch exporter. Weights and input/output semantics are unchanged; the maximum
+PyTorch/ONNX Runtime absolute error is `1.43e-6`.
 
-App 按时间戳从 CameraX 前置摄像头取样：
+## Input and output
 
-- 16 个 RGB 帧；
-- 8 fps，首尾跨度约 1.875 秒；
-- 中心方形裁剪后缩放为 192×192；
-- 像素先缩放到 `[0, 1]`，再按通道执行 `(x - mean) / std`；
-- mean：`[0.43216, 0.394666, 0.37645]`；
-- std：`[0.22803, 0.22145, 0.216989]`；
-- App 传入 ONNX 的张量为 float32、NTCHW 布局 `[1, 16, 3, 192, 192]`；模型图内部
-  再转为 S3D 使用的 NCTHW 布局。
+The app samples the CameraX front-camera stream by timestamp:
 
-模型输出一个 logit，App 用 sigmoid 得到 `[0, 1]` 分数。每 0.5 秒推理一次，相邻
-窗口共享 12/16 帧。App 的 1.0 判定器使用 0.65 高门限、0.10 低门限和 6 秒累计证据。
-该分数不是经过大规模真实用户校准的概率。
+- 16 RGB frames
+- 8 fps, spanning approximately 1.875 seconds
+- Center square crop resized to 192×192
+- Pixels scaled to `[0, 1]`, then normalized per channel as `(x - mean) / std`
+- Mean: `[0.43216, 0.394666, 0.37645]`
+- Standard deviation: `[0.22803, 0.22145, 0.216989]`
+- float32 ONNX input in NTCHW layout: `[1, 16, 3, 192, 192]`; the graph
+  transposes it to S3D's NCTHW layout
 
-## 训练来源
+The model emits one logit and the app applies sigmoid to obtain a score in
+`[0, 1]`. Inference runs every 0.5 seconds, so adjacent windows share 12 of 16
+frames. The 1.0 decision filter uses a 0.65 high threshold, 0.10 low threshold,
+and six seconds of accumulated evidence. The score is not a probability
+calibrated across a large real-user population.
 
-1. TorchVision `S3D_Weights.KINETICS400_V1` 预训练权重；
-2. UCF101 的 `BrushingTeeth`、困难负样本和普通负样本；
-3. 一段经维护者本人同意的真机刷牙正样本，用于有限的域适配。
+## Training provenance
 
-UCF101 视频通过 Hugging Face 用户镜像 `guyuchao/UCF101` 获取。镜像不是 UCF101
-官方发布渠道，仓库没有发现它为原始视频另行授予许可证，因此本项目不再分发任何
-UCF101 原始视频，也不把镜像标记为“官方镜像”。完整来源和依赖许可见
-[`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) 与
-[`MODEL_LICENSE.md`](../MODEL_LICENSE.md)。
+1. TorchVision `S3D_Weights.KINETICS400_V1` pretrained weights
+2. UCF101 `BrushingTeeth`, hard-negative, and ordinary negative classes
+3. One maintainer-consented phone brushing recording for limited domain
+   adaptation
 
-## 训练与验证方法
+UCF101 video is obtained through the Hugging Face user mirror
+`guyuchao/UCF101`. It is not an official UCF101 distribution channel and
+provides no separate license for the source video. The project redistributes no
+UCF101 video and does not call the mirror official. See
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and
+[MODEL_LICENSE.md](../MODEL_LICENSE.md).
 
-训练时随机选择连续 1.875 秒窗口；验证时每 0.5 秒生成一个重叠窗口。UCF101 按原视频
-group 划分，group 19 及以后作为固定验证集，避免同一原视频的窗口同时出现在训练和
-验证中。曝光、伽马、对比度、白平衡、水平翻转、轻微运动模糊和传感器噪声对整段
-clip 一致应用，避免制造不自然的逐帧颜色跳变。
+## Training and validation
 
-公开数据基础模型在固定验证集、以每个原视频窗口中位数计一次时：
+Training chooses a random continuous 1.875-second clip. Validation emits an
+overlapping window every 0.5 seconds. UCF101 groups 19 and later form the fixed
+validation split, preventing windows from one source video from entering both
+train and validation. Exposure, gamma, contrast, white balance, horizontal
+flip, mild motion blur, and sensor noise are applied consistently across a clip.
 
-| 指标 | 结果 |
-| --- | ---: |
+On the fixed public-data validation split, counting the median score of each
+source video once:
+
+| Metric | Result |
+|---|---:|
 | Accuracy | 97.47% |
 | Precision | 95.00% |
 | Recall | 92.68% |
 | F1 | 93.83% |
 
-在 0.70 标定门限上，原视频级 precision/recall 为 100%/87.80%，窗口级为
-97.22%/89.86%。加入本地正样本混合微调后，隔离 UCF 指标保持不变。本地样本的窗口
-分数中位数约从 0.46 升至 0.97，高于 0.70 的比例从 35% 升至 76.25%。
+At threshold 0.70, video-level precision/recall is 100%/87.80%, and window-level
+precision/recall is 97.22%/89.86%. Mixed fine-tuning with the local positive
+sample preserves the isolated UCF metrics. The local sample's median window
+score rises from about 0.46 to 0.97, and the fraction above 0.70 rises from 35%
+to 76.25%.
 
-最后一组数字来自参与训练的同一段视频，只能证明域适配生效，不能作为独立泛化成绩。
-窗口高度重叠，也不能把每个窗口当成独立测试样本扩大样本量。
+Those last numbers come from the same recording used for training. They only
+confirm that domain adaptation changed that sample and are not independent
+generalization results. Overlapping windows are correlated and must not be
+counted as independent test samples.
 
-## 局限和风险
+## Limitations and risks
 
-- 真实用户、设备、肤色、浴室光线、牙刷和拍摄角度覆盖很少；
-- 可能把嘴边相似动作、剃须或手机抖动误判，也可能漏掉真实刷牙；
-- 分数和阈值可能随新模型变化，不能跨模型直接比较；
-- 摄像头被遮挡、权限被撤销或设备过暗时无法可靠工作；
-- 不能作为健康、医疗、安全或必须叫醒场景的唯一保障。
+- Very limited coverage of real users, devices, skin tones, bathroom lighting,
+  toothbrushes, and camera angles
+- Similar mouth-area movement, shaving, or phone shake may be mistaken for
+  brushing, while real brushing may be missed
+- Scores and thresholds may change between models and are not directly
+  comparable across versions
+- A covered camera, revoked permission, or extreme darkness prevents reliable
+  operation
+- Not a sole safeguard for health, medical, safety, or guaranteed wake-up use
 
-建议始终保留系统闹钟等备用方式。
+Always keep a system alarm or another backup.
 
-## 后续数据评估
+## Future data evaluation
 
-志愿者数据必须按贡献者划分训练、验证和测试集，不能让同一人的相邻视频跨集合。
-至少单独报告不同设备、光线和人口分组的召回率、误报率及样本数。任何原始视频都不得
-进入公开 Git 历史或模型 Release。
+Volunteer data must be split by contributor, never allowing adjacent video from
+one person to cross train, validation, and test. Recall, false-positive rate, and
+sample count should be reported separately across devices, lighting, and
+demographic groups. No raw video may enter public Git history or model Releases.

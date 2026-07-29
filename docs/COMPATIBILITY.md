@@ -1,83 +1,96 @@
-# 兼容性与测试范围
+# Compatibility and Test Scope
 
-[English](en/COMPATIBILITY.md) | 简体中文
+English | [简体中文](COMPATIBILITY.zh-CN.md)
 
-## 当前结论
+## Current conclusion
 
-本项目目前只在维护者的 vivo X300（Android 16 / OriginOS 6）上完成完整测试，
-尚未做多品牌适配。
+Full end-to-end testing has only been completed on the maintainer's vivo X300
+running Android 16 / OriginOS 6. Cross-vendor adaptation has not been completed.
 
-最低系统为 Android 8.0（API 26），目标 SDK 为 35。达到最低版本只代表可以安装，
-不代表厂商后台策略和全屏通知行为已经验证。
+The minimum declared OS is Android 8.0 (API 26), with target SDK 35. Meeting the
+minimum only means that installation is allowed; it does not validate vendor
+background policy or full-screen notification behavior.
 
-## 安装范围与现实下限
+## Installation range and practical floor
 
-- 构建同时生成 `arm64-v8a`、`armeabi-v7a`、`x86`、`x86_64` 分包和 universal APK；
-- Android 8.0/API 26 是清单声明的理论安装下限；
-- 现实中建议使用 Android 10 以上、64 位 ARM、至少 4 GB 内存并具有性能较好的大核；
-- 32 位 ARM 和 2 GB 内存设备虽然可能安装，但模型速度、内存和厂商后台行为均未验证；
-- x86/x86_64 主要用于模拟器，不代表闹钟、锁屏和摄像头在真实手机上的兼容性；
-- 设备必须具有前置摄像头，并允许通知、精确闹钟、锁屏显示、全屏通知和必要的厂商
-  后台权限。
+- Builds produce `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`, and universal APKs.
+- Android 8.0/API 26 is the manifest-level theoretical installation floor.
+- In practice, Android 10 or newer, 64-bit ARM, at least 4 GB RAM, and a
+  reasonably fast performance core are recommended.
+- 32-bit ARM and 2 GB devices may install, but model latency, memory use, and
+  vendor background behavior have not been validated.
+- x86/x86_64 primarily support emulators and do not establish real-phone
+  compatibility for alarms, lock screen, or camera.
+- A front camera and notification, exact-alarm, lock-screen, full-screen, and
+  vendor background permissions are required.
 
-当前模型每个窗口约需 13.2 GMAC（约 26.4 GFLOP，乘法和加法分别计数），App 最多每
-0.5 秒启动一次推理。要不积压地维持该频率，CPU 实际推理时间需要低于 500 ms。达不到
-这一速度时 App 会跳过重叠任务而不是无限排队，因此仍可运行，但验证时间会变长。上述
-“4 GB/64 位 ARM”是保守建议，不是经过多机型测出的硬门槛。
+The current model needs approximately 13.2 GMAC per window (about 26.4 GFLOP
+when multiplication and addition are counted separately). The app starts at most
+one inference every 0.5 seconds; sustained CPU inference must remain below
+500 ms to avoid falling behind. Slower devices skip overlapping work instead of
+building an unlimited queue, so they may still run but take longer to verify.
+The 4 GB/64-bit ARM recommendation is conservative, not a measured hard limit
+across many phones.
 
-## 真机检查矩阵
+## Physical-device matrix
 
-| 场景 | vivo X300 / Android 16 / OriginOS 6 | 其他设备 |
-| --- | --- | --- |
-| App 在前台到点响铃并进入验证 | 已验证 | 未验证 |
-| 熄屏锁屏到点唤醒并进入验证 | 已验证 | 未验证 |
-| 从最近任务划掉 App 后到点响铃 | 已验证（需厂商权限） | 未验证 |
-| 周一至周日重复闹钟 | 已人工验证 | 未验证 |
-| 持续模式与舍友模式 | 已人工验证 | 未验证 |
-| 重启后重新登记闹钟 | 已实现，仍需扩大设备验证 | 未验证 |
-| 系统强行停止后自动恢复 | Android 不允许 | Android 不允许 |
-| 刷牙识别跨人脸、光线和牙刷 | 样本不足 | 未验证 |
+| Scenario | vivo X300 / Android 16 / OriginOS 6 | Other devices |
+|---|---|---|
+| Foreground alarm opens verification | Verified | Not verified |
+| Screen-off/locked alarm wakes and opens verification | Verified | Not verified |
+| Alarm after dismissing the recent-task card | Verified with vendor permissions | Not verified |
+| Monday–Sunday repeat selection | Manually verified | Not verified |
+| Continuous and roommate modes | Manually verified | Not verified |
+| Alarm restoration after reboot | Implemented; broader validation needed | Not verified |
+| Automatic recovery after system Force stop | Android does not allow it | Android does not allow it |
+| Recognition across people, lighting, and toothbrushes | Insufficient samples | Not verified |
 
-## 建议反馈信息
+## Recommended report information
 
-请在兼容性 Issue 中提供：
+Include the following in a compatibility Issue:
 
-- 手机品牌和完整型号；
-- Android 版本、厂商系统名称与版本；
-- App 版本与 Debug/Release 类型；
-- 是否允许精确闹钟、通知、摄像头、后台弹出、锁屏显示、自启动和后台耗电；
-- 测试时是否锁屏、是否从最近任务划掉、闹钟计划时间与实际行为；
-- 可复现的文字步骤。
+- Phone brand and complete model
+- Android version and vendor OS/version
+- App version and Debug/Release build type
+- Exact-alarm, notification, camera, background-launch, lock-screen, autostart,
+  and background-power permission state
+- Whether the screen was locked or the recent-task card was dismissed, and the
+  scheduled versus observed alarm behavior
+- Reproducible textual steps
 
-请勿公开上传刷牙视频、浴室画面、未脱敏日志或设备唯一标识。
+Do not publicly upload brushing/bathroom video, unredacted logs, or unique device
+identifiers.
 
-## 厂商设置
+## Vendor settings
 
-不同系统的设置项名称和入口会变化。App 只能跳转到系统或厂商可能相关的设置页，
-不能代替用户授权。若设备没有对应厂商页面，保持 Android 标准精确闹钟、通知、摄像头
-和电池优化设置即可。
+Setting names and locations change between operating systems. The app can open a
+possibly relevant system/vendor page but cannot grant permission on the user's
+behalf. If a vendor-specific page does not exist, configure standard Android
+exact-alarm, notification, camera, and battery-optimization settings.
 
-### vivo X300 / OriginOS 6 参考
+### vivo X300 / OriginOS 6 reference
 
-在维护者的测试设备上，需要为“刷牙闹钟”开启：
+The maintainer's test phone requires the following for Brush Alarm:
 
-- 自启动；
-- 锁屏显示；
-- 后台弹出界面；
-- 后台耗电管理选择“允许后台耗电”。
+- Autostart
+- Display on lock screen
+- Background pop-up
+- Background power management set to “Allow background power usage”
 
-以下截图只用于帮助定位 OriginOS 6 中的设置项。系统升级后入口和名称可能变化；其他
-品牌请寻找含义相近的自启动、锁屏显示、后台启动和电池限制设置。点击图片可查看原图。
+The screenshots below only help locate settings on OriginOS 6. Names and
+locations may change after an update; other vendors use similar autostart,
+lock-screen, background-launch, and battery-restriction concepts. Select an
+image to view it at full resolution.
 
 <p>
-  <a href="images/originos6/app-background-permissions.jpg">
-    <img src="images/originos6/app-background-permissions.jpg"
+  <a href="../images/originos6/app-background-permissions.jpg">
+    <img src="../images/originos6/app-background-permissions.jpg"
          width="360"
-         alt="OriginOS 6 中刷牙闹钟的自启动、锁屏显示和后台弹出界面设置">
+         alt="OriginOS 6 autostart, lock-screen display, and background pop-up settings">
   </a>
-  <a href="images/originos6/background-power-management.jpg">
-    <img src="images/originos6/background-power-management.jpg"
+  <a href="../images/originos6/background-power-management.jpg">
+    <img src="../images/originos6/background-power-management.jpg"
          width="360"
-         alt="OriginOS 6 中刷牙闹钟的允许后台耗电设置">
+         alt="OriginOS 6 allow-background-power setting">
   </a>
 </p>

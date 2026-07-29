@@ -1,27 +1,38 @@
-# 社区行为准则
+# Community Code of Conduct
 
-[English](CODE_OF_CONDUCT_EN.md) | 简体中文
+English | [简体中文](CODE_OF_CONDUCT.zh-CN.md)
 
-本项目欢迎不同经验、背景和身份的参与者。所有仓库 Issue、Pull Request、讨论和维护者
-指定的项目沟通渠道均应保持尊重、善意和与项目相关。
+This project welcomes contributors of different experience levels,
+backgrounds, and identities. All repository Issues, pull requests, discussions,
+and project channels designated by the maintainer must remain respectful,
+constructive, and relevant to the project.
 
-## 期待的行为
+## Expected behavior
 
-- 针对技术事实和可复现证据讨论，不攻击或羞辱个人；
-- 尊重参与者的隐私、知情同意和撤回选择；
-- 不公开刷牙视频、浴室画面、未脱敏日志、联系方式或其他个人信息；
-- 在涉及安全或隐私的问题上使用 [`SECURITY.md`](SECURITY.md) 指定的私下渠道；
-- 接受维护者为保护参与者和项目而进行的适度管理。
+- Discuss technical facts and reproducible evidence without attacking or
+  humiliating people.
+- Respect participants' privacy, informed consent, and withdrawal choices.
+- Never publicly disclose brushing video, bathroom footage, unredacted logs,
+  contact details, or other personal data.
+- Use the private process in [`SECURITY.md`](SECURITY.md) for security or
+  privacy concerns.
+- Accept proportionate moderation used to protect participants and the project.
 
-## 不可接受的行为
+## Unacceptable behavior
 
-骚扰、歧视、威胁、色情化言论、恶意跟踪、未经同意披露个人信息，以及持续扰乱项目
-讨论均不可接受。维护者可以编辑、隐藏或删除违规内容，并临时或永久限制参与权限。
+Harassment, discrimination, threats, sexualized language, malicious tracking,
+non-consensual disclosure of personal information, and persistent disruption
+are unacceptable. The maintainer may edit, hide, or remove violating content
+and may temporarily or permanently restrict participation.
 
-## 报告
+## Reporting
 
-一般行为问题可联系 [BrushAlarm@163.com](mailto:BrushAlarm@163.com)。请只提供处理
-问题所需的最少信息，不要通过公开 Issue 提交敏感材料。维护者会善意审查报告、尽量
-保护报告者隐私，并在能力范围内采取一致的处理方式。
+General conduct concerns may be sent to
+[BrushAlarm@163.com](mailto:BrushAlarm@163.com). Provide only the minimum
+information needed to handle the report and do not submit sensitive material
+through a public Issue. The maintainer will review reports in good faith, make
+reasonable efforts to protect reporter privacy, and apply remedies consistently
+within available capacity.
 
-本准则只管理项目社区空间，不取代适用法律或平台规则。
+This code governs project community spaces; it does not replace applicable law
+or platform rules.

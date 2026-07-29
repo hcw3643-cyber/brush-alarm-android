@@ -1,6 +1,6 @@
 # Model License Notice
 
-English | [简体中文](MODEL_LICENSE.md)
+English | [简体中文](MODEL_LICENSE.zh-CN.md)
 
 > This file applies only to model weights, not to repository software source.
 > Software source is licensed under GNU GPL v3.0 only in the root
@@ -57,4 +57,4 @@ users must review those independently.
 
 The model is not intended to identify individuals. Original volunteer video must
 not be published with the model, source, Issues, or Releases. See
-`docs/en/DATA_CONTRIBUTION.md` for data-handling principles.
+`docs/DATA_CONTRIBUTION.md` for data-handling principles.

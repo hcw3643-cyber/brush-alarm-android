@@ -1,119 +1,132 @@
-# MoViNet A0 流式训练与验证
+# MoViNet A0 Streaming Training and Validation
 
-[English](MOVINET_A0_EN.md) | 简体中文
+English | [简体中文](MOVINET_A0.zh-CN.md)
 
-## 结论
+## Conclusion
 
-MoViNet A0 已完成与 S3D 相同 UCF group 划分上的二分类头训练和全视频滑窗验证，视频级
-F1 为 **93.67%**，接近正式 S3D 的 93.83%。它只有 253.9 万参数，原生流式 TFLite
-约 10.2 MB，值得作为下一代模型继续做真机域适配。
+MoViNet A0 has completed binary-head training and full sliding-window validation
+on the same UCF group split as S3D. Its video-level F1 is **93.67%**, close to
+production S3D's 93.83%. With 2.539 million parameters and a native streaming
+TFLite artifact of about 10.2 MB, it is worth continued phone-domain
+adaptation as a next-generation model.
 
-它目前**没有替换正式 S3D，也没有接入 App**，原因是：
+It **has not replaced S3D and is not integrated into the app** because:
 
-- 当前只训练二分类头，backbone 保持 Kinetics-600 预训练权重冻结；
-- UCF 动作视频不能代表手机前置摄像头、浴室光线和真实用户；
-- 0.65 门限下 precision 为 100%，但 recall 只有 85.37%；
-- 还没有多用户隔离测试、vivo X300 延迟、温升和耗电结果；
-- App 当前使用 ONNX Runtime，A0 需要 LiteRT 和 43 个状态张量的生命周期管理。
+- Only the binary head is trained; the Kinetics-600 backbone remains frozen.
+- UCF action video does not represent phone front cameras, bathroom lighting,
+  or real users.
+- At the app's 0.65 threshold, precision is 100% but recall is only 85.37%.
+- No contributor-isolated multi-user test or vivo X300 latency, thermal, and
+  power benchmark exists.
+- The app currently uses ONNX Runtime; A0 requires LiteRT and lifecycle
+  management for 43 state tensors.
 
-## 为什么使用 Stream 2+1D
+## Why Stream 2+1D
 
-官方迁移学习教程默认的 `base + Conv3D` 图在实际测试中需要 `Select TF Ops`，普通
-TFLite 解释器无法分配 `Conv3D` 和 `AvgPool3D`。最终使用官方移动端测试配置：
+The official tutorial's default `base + Conv3D` graph required Select TF Ops in
+testing, and a regular TFLite interpreter could not allocate its
+`Conv3D`/`AvgPool3D` operations. The mobile graph uses:
 
 - `causal=true`
 - `conv_type=2plus1d`
 - `se_type=2plus3d`
 - `activation=hard_swish`
 - `gating_activation=hard_sigmoid`
-- 显式输入/输出 43 个 stream-buffer 状态张量
+- 43 explicit stream-buffer state inputs and outputs
 
-该图只使用 TFLite built-in 算子，不需要 Flex delegate。
+It converts using only TFLite built-in operators and needs no Flex delegate.
 
-## 输入与状态契约
+## Input and state contract
 
 ```text
-训练输入：NTHWC [batch, 16, 172, 172, 3]
-数值范围：RGB float32 [0, 1]
-采样：8 fps，首尾跨度 1.875 秒
-部署输入：NTHWC [1, 1, 172, 172, 3]，每次输入一个新帧
-状态：43 个由模型返回并传给下一帧的张量
-输出：一个二分类 logit
+Training input: NTHWC [batch, 16, 172, 172, 3]
+Value range: RGB float32 [0, 1]
+Sampling: 8 fps, spanning 1.875 seconds
+Deployment input: NTHWC [1, 1, 172, 172, 3], one new frame per call
+State: 43 tensors returned by one call and supplied to the next
+Output: one binary logit
 ```
 
-这与正式 S3D 的 192×192、Kinetics mean/std 标准化和 16 帧整窗 ONNX 输入不同。
-接入 App 时必须实现独立预处理，并在新验证会话、摄像头重绑定、时间戳中断和 Session
-重建时重置全部状态。
+This differs from S3D's 192×192 input, Kinetics mean/std normalization, and
+full-window ONNX execution. Integration must implement separate preprocessing
+and reset all state on a new session, camera rebind, timestamp discontinuity, or
+runtime recreation.
 
-## 完整训练
+## Complete training
 
-- 环境：Python 3.12.3、TensorFlow 2.20.0、TF Models Official 2.20.0；
-- 训练设备：RTX 4060 Laptop GPU（WSL2）；
-- 官方 A0 Stream checkpoint：
-  `d116a0d75abf3876976614cd3440cb08c4a03a907db2ba0c3dff5751ea0953c0`；
-- 数据：486 个训练视频、198 个固定验证视频；
-- 划分：UCF group 1–18 训练，19–25 验证；
-- 训练采样：每轮 486 个类别平衡的随机 16 帧窗口，并执行整段一致的光照、颜色、
-  翻转、运动模糊和传感器噪声增强；
-- 优化：冻结 backbone，只训练 987,137 个二分类头参数；
-- 最佳 checkpoint：第 4 轮，中心窗口验证 F1 0.88；
-- 第 6 轮后早停，并恢复第 4 轮 checkpoint 做完整验证。
+- Python 3.12.3, TensorFlow 2.20.0, TF Models Official 2.20.0
+- RTX 4060 Laptop GPU under WSL2
+- Official Stream checkpoint SHA-256:
+  `d116a0d75abf3876976614cd3440cb08c4a03a907db2ba0c3dff5751ea0953c0`
+- 486 training videos and 198 fixed validation videos
+- UCF groups 1–18 for training and 19–25 for validation
+- 486 class-balanced random clips per epoch with clip-consistent lighting,
+  color, flip, motion-blur, and sensor-noise augmentation
+- Frozen backbone; 987,137 binary-head parameters trained
+- Best checkpoint at epoch 4 with center-clip F1 0.88
+- Early stop after epoch 6, then restore epoch 4 for complete validation
 
-## 固定验证集结果
+## Fixed validation result
 
-最终每 0.5 秒生成一个窗口，共 2554 个窗口；主指标对每段原视频取窗口分数中位数，
-198 个视频各计一次。
+Validation emits one window every 0.5 seconds: 2,554 windows total. Main metrics
+count the median score of each of 198 source videos once.
 
-| 模型 | Accuracy | Precision | Recall | F1 | 最佳门限 | 窗口 F1 |
+| Model | Accuracy | Precision | Recall | F1 | Best threshold | Window F1 |
 |---|---:|---:|---:|---:|---:|---:|
-| 正式 S3D + 真机域适配 | 97.47% | 95.00% | 92.68% | **93.83%** | 0.27 | 91.32% |
-| MoViNet A0 Stream（冻结 backbone） | 97.47% | **97.37%** | 90.24% | 93.67% | 0.59 | 89.60% |
+| Production S3D + phone adaptation | 97.47% | 95.00% | 92.68% | **93.83%** | 0.27 | 91.32% |
+| MoViNet A0 Stream, frozen backbone | 97.47% | **97.37%** | 90.24% | 93.67% | 0.59 | 89.60% |
 
-A0 在 App 当前 0.65 门限下：
+At the app's current 0.65 threshold:
 
 | Accuracy | Precision | Recall | F1 |
 |---:|---:|---:|---:|
 | 96.97% | 100.00% | 85.37% | 92.11% |
 
-门限和 checkpoint 都使用同一固定验证集选择，因此这仍是验证/标定结果，不是独立
-held-out test。窗口高度重叠，也不能把 2554 个窗口当成 2554 个独立样本。
+Checkpoint and threshold selection use the same fixed validation split, so this
+is validation/calibration, not an independent held-out test. Overlapping windows
+are correlated and must not be presented as 2,554 independent examples.
 
-## 导出与数值一致性
+## Export and numerical parity
 
-| 项目 | 结果 |
+| Item | Result |
 |---|---:|
-| 参数量 | 2,538,632 |
-| TFLite 大小 | 10,202,540 bytes |
+| Parameters | 2,538,632 |
+| TFLite size | 10,202,540 bytes |
 | TFLite SHA-256 | `369a3308d4c87c453db948bdd915cc843da52de269eedf1c4efc7e29d4729c95` |
-| 流式 TensorFlow/TFLite logit 最大绝对误差 | `0.001543` |
-| 流式 TensorFlow/TFLite sigmoid 分数最大绝对误差 | `2.09e-11` |
-| WSL x86 两线程单帧延迟中位数 | 4.07 ms |
-| 单帧 P90 | 4.24 ms |
-| 16 帧序列延迟中位数 | 65.14 ms |
+| Streaming TensorFlow/TFLite maximum logit error | `0.001543` |
+| Streaming TensorFlow/TFLite maximum sigmoid-score error | `2.09e-11` |
+| WSL x86 two-thread median per frame | 4.07 ms |
+| Per-frame P90 | 4.24 ms |
+| Median 16-frame sequence | 65.14 ms |
 
-训练图一次处理 16 帧，部署图逐帧传递显式状态，两者不是完全相同的执行图，因此发布
-一致性检查比较的是“流式 TensorFlow 图 vs TFLite”。训练图与流式图也单独记录误差，
-但不能用它替代转换器一致性判断。
+The training graph consumes a whole clip while deployment carries explicit
+state frame by frame. They are not the same execution graph, so conversion
+parity correctly compares streaming TensorFlow with TFLite. Training-vs-stream
+drift is recorded separately, but cannot replace converter-parity validation.
 
-TFLite 转换器估算每帧约 50.67 MMAC；以 8 fps 持续执行约 0.405 GMAC/s。正式 S3D
-重叠窗口方案约 26.4 GMAC/s，理论乘加量相差约 65 倍。该数字不包含相机预处理、运行
-时调度或内存访问，不能替代 Android 实机耗电测试。
+The converter estimates about 50.67 MMAC per frame, or 0.405 GMAC/s at 8 fps.
+The overlapping S3D path is about 26.4 GMAC/s, roughly 65× more multiply-adds.
+That theoretical comparison excludes preprocessing, scheduling, and memory
+traffic and cannot replace an Android power benchmark.
 
-## 下一步
+## Next steps
 
-1. 使用按贡献者隔离的真机刷牙、停止动作和相似负样本微调；
-2. 单独划分训练、标定和测试用户；
-3. 重新确定高/低门限和累计证据时间；
-4. 在 App 实验分支接入 LiteRT，并正确维护/重置 43 个状态；
-5. 在 vivo X300 测量端到端延迟、温升、耗电和停止动作响应；
-6. 评估 float16 或 int8 量化，再决定是否替换 S3D。
+1. Fine-tune on contributor-isolated phone positives, stopped actions, and
+   confusing negatives.
+2. Split train, calibration, and test by contributor.
+3. Recalibrate thresholds and accumulated-evidence duration.
+4. Integrate LiteRT on an experimental app branch with correct state resets.
+5. Measure vivo X300 latency, thermal behavior, power, and stop-action response.
+6. Evaluate float16/int8 quantization before considering S3D replacement.
 
-## 上游来源
+## Upstream
 
-- [MoViNets 论文](https://arxiv.org/abs/2103.11511)
-- [TensorFlow 官方 MoViNet 流式教程](https://www.tensorflow.org/hub/tutorials/movinet)
-- [TensorFlow 官方 MoViNet 迁移学习教程](https://www.tensorflow.org/tutorials/video/transfer_learning_with_movinet)
-- [TensorFlow Model Garden MoViNet 源码](https://github.com/tensorflow/models/tree/master/official/projects/movinet)
+- [MoViNets paper](https://arxiv.org/abs/2103.11511)
+- [Official TensorFlow streaming tutorial](https://www.tensorflow.org/hub/tutorials/movinet)
+- [Official TensorFlow transfer-learning tutorial](https://www.tensorflow.org/tutorials/video/transfer_learning_with_movinet)
+- [TensorFlow Model Garden implementation](https://github.com/tensorflow/models/tree/master/official/projects/movinet)
 
-TensorFlow Model Garden 源码使用 Apache-2.0；官方权重仍继承 Kinetics-600 数据来源的
-许可与使用边界。本实验不提交或发布 checkpoint、TFLite 或原始视频。
+TensorFlow Model Garden source uses Apache-2.0. Official weights remain subject
+to the licensing and use boundaries of their Kinetics-600 data source. This
+experiment does not commit or release a checkpoint, TFLite artifact, or source
+video.

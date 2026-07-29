@@ -18,7 +18,7 @@
 - 软件源代码使用 [GNU GPL v3.0 only](LICENSE)；任何人可以运行、研究、修改和分发，
   包括商业使用，但分发修改版或 APK 时必须遵守 GPLv3 的对应源码和同许可证要求。
 - `brush_classifier.onnx` 不是 GPL 软件代码，继续适用独立的
-  [模型许可和来源限制](MODEL_LICENSE.md)。软件许可证不替模型或训练数据补齐权利。
+  [模型许可和来源限制](MODEL_LICENSE.zh-CN.md)。软件许可证不替模型或训练数据补齐权利。
 - App 不上传摄像头画面；正式版不写入或导出推理日志。
 
 ## 已实现
@@ -41,7 +41,7 @@
 - 普通 App 无法阻止系统“强行停止”，也无法实现 Device Owner/Kiosk 等级的完全锁定。
 - 当前模型的训练用户和真实设备覆盖不足，可能在不同面孔、牙刷、角度和光线下漏检。
 - 当前兼容性范围和测试方法见
-  [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。
+  [docs/COMPATIBILITY.zh-CN.md](docs/COMPATIBILITY.zh-CN.md)。
 
 ## 下载 App
 
@@ -102,7 +102,7 @@ Windows PowerShell：
 .\scripts\fetch-model.ps1
 ```
 
-可以从 `model-v1.0.1` Release 手工下载。模型来源、输入格式、指标和限制见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)。
+可以从 `model-v1.0.1` Release 手工下载。模型来源、输入格式、指标和限制见 [docs/MODEL_CARD.zh-CN.md](docs/MODEL_CARD.zh-CN.md)。
 
 ### 3. 构建
 
@@ -135,13 +135,13 @@ brushAlarm.useChinaMirrors=true
 模型以 TorchVision S3D/Kinetics-400 权重为基础，在 UCF101 刷牙和困难负样本上微调，
 并使用一段经维护者同意的真机视频做域适配。第三方数据条款并不完全明确，因此模型
 作为独立实验性资产发布，不宣称获得 UCF101 原始视频的再分发权，也不包含任何
-原始训练视频。详见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md) 和
-[MODEL_LICENSE.md](MODEL_LICENSE.md)。
+原始训练视频。详见 [docs/MODEL_CARD.zh-CN.md](docs/MODEL_CARD.zh-CN.md) 和
+[MODEL_LICENSE.zh-CN.md](MODEL_LICENSE.zh-CN.md)。
 
 MoViNet A0 已完成相同 UCF 划分上的训练、流式 TFLite 导出和数值一致性验证。它的
 视频级 F1 为 93.67%，接近当前 S3D 的 93.83%；理论计算量约低 65 倍，但尚未经过
 真机域验证，也尚未接入正式 App。详见
-[training/MOVINET_A0.md](training/MOVINET_A0.md)。
+[training/MOVINET_A0.zh-CN.md](training/MOVINET_A0.zh-CN.md)。
 
 ## 参与项目
 
@@ -150,10 +150,10 @@ MoViNet A0 已完成相同 UCF 划分上的训练、流式 TFLite 导出和数�
 - 志愿者刷牙视频征集已开放，只通过项目邮箱
   [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收；发送前必须阅读并在邮件中
   明确接受数据贡献说明。
-- 代码贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-- 社区交流遵循 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+- 代码贡献规则见 [CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md)。
+- 社区交流遵循 [CODE_OF_CONDUCT.zh-CN.md](CODE_OF_CONDUCT.zh-CN.md)。
 - 数据贡献原则见
-  [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)。
+  [docs/DATA_CONTRIBUTION.zh-CN.md](docs/DATA_CONTRIBUTION.zh-CN.md)。
 
 ## 项目结构
 
@@ -172,13 +172,13 @@ MoViNet A0 已完成相同 UCF 划分上的训练、流式 TFLite 导出和数�
 └── THIRD_PARTY_NOTICES.md
 ```
 
-更详细的数据流和组件职责见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+更详细的数据流和组件职责见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。
 
 ## 隐私与安全
 
 正式版摄像头帧只在手机内存中实时分析，不保存、不上传。测试版日志只包含模型数值、
 时间和设备信息，不包含图像、视频或音频，但分享前仍应人工检查。完整说明见
-[docs/PRIVACY.md](docs/PRIVACY.md)；安全问题请遵循 [SECURITY.md](SECURITY.md)。
+[docs/PRIVACY.zh-CN.md](docs/PRIVACY.zh-CN.md)；安全问题请遵循 [SECURITY.zh-CN.md](SECURITY.zh-CN.md)。
 
 ## 许可
 
@@ -191,7 +191,7 @@ MoViNet A0 已完成相同 UCF 划分上的训练、流式 TFLite 导出和数�
 
 GPL 允许商业使用和收费分发，但分发者必须履行 GPLv3，不能把该软件的衍生版本改成
 闭源专有软件。模型权重不包含在根目录 `LICENSE` 的授权范围内；分发包含模型的 APK
-前还必须分别确认并遵守 [MODEL_LICENSE.md](MODEL_LICENSE.md) 及第三方来源条款。
+前还必须分别确认并遵守 [MODEL_LICENSE.zh-CN.md](MODEL_LICENSE.zh-CN.md) 及第三方来源条款。
 
-详情见 [LICENSE](LICENSE)、[MODEL_LICENSE.md](MODEL_LICENSE.md) 和
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+详情见 [LICENSE](LICENSE)、[MODEL_LICENSE.zh-CN.md](MODEL_LICENSE.zh-CN.md) 和
+[THIRD_PARTY_NOTICES.zh-CN.md](THIRD_PARTY_NOTICES.zh-CN.md)。

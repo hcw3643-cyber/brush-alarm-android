@@ -22,7 +22,7 @@ detects that the user is brushing their teeth.
   it, including commercially, subject to the GPLv3 source and same-license
   obligations for distributed derivatives and APKs.
 - `brush_classifier.onnx` is not GPL software source. It remains subject to the
-  separate [model license and provenance limitations](MODEL_LICENSE_EN.md).
+  separate [model license and provenance limitations](MODEL_LICENSE.md).
   Licensing the application does not grant missing rights to model weights or
   training data.
 - The production app does not upload camera frames and does not write or export
@@ -57,7 +57,7 @@ detects that the user is brushing their teeth.
   provide Device Owner / kiosk-level lock-down.
 - The current model has limited user and real-device coverage. It may miss
   brushing with unfamiliar faces, toothbrushes, angles, or lighting.
-- See [docs/en/COMPATIBILITY.md](docs/en/COMPATIBILITY.md) for the current compatibility
+- See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the current compatibility
   scope and test method.
 
 ## Download the app
@@ -125,7 +125,7 @@ On Windows PowerShell:
 ```
 
 It can also be downloaded manually from the `model-v1.0.1` Release. See
-[docs/en/MODEL_CARD.md](docs/en/MODEL_CARD.md) for provenance, input format, metrics,
+[docs/MODEL_CARD.md](docs/MODEL_CARD.md) for provenance, input format, metrics,
 and limitations.
 
 ### 3. Build
@@ -166,14 +166,14 @@ one maintainer-consented phone recording. The third-party dataset terms are not
 fully explicit. The model is therefore released as a separate experimental
 asset, does not claim redistribution rights to UCF101 source videos, and
 contains no source training recordings. See
-[docs/en/MODEL_CARD.md](docs/en/MODEL_CARD.md) and
-[MODEL_LICENSE_EN.md](MODEL_LICENSE_EN.md).
+[docs/MODEL_CARD.md](docs/MODEL_CARD.md) and
+[MODEL_LICENSE.md](MODEL_LICENSE.md).
 
 MoViNet A0 has completed training on the same UCF split, streaming TFLite
 export, and numerical parity checks. Its video-level F1 is 93.67%, close to
 S3D's 93.83%, at roughly 65 times fewer theoretical operations. It still lacks
 phone-domain validation and has not replaced the production model. See
-[training/MOVINET_A0_EN.md](training/MOVINET_A0_EN.md).
+[training/MOVINET_A0.md](training/MOVINET_A0.md).
 
 ## Contributing
 
@@ -184,10 +184,10 @@ phone-domain validation and has not replaced the production model. See
 - Volunteer brushing-video collection is open only through
   [BrushAlarm@163.com](mailto:BrushAlarm@163.com). Read the data contribution
   notice and include its explicit confirmation before sending anything.
-- Code contribution rules: [CONTRIBUTING_EN.md](CONTRIBUTING_EN.md)
-- Community participation: [CODE_OF_CONDUCT_EN.md](CODE_OF_CONDUCT_EN.md)
+- Code contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Community participation: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Data contribution principles:
-  [docs/en/DATA_CONTRIBUTION.md](docs/en/DATA_CONTRIBUTION.md)
+  [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)
 
 ## Repository layout
 
@@ -206,7 +206,7 @@ phone-domain validation and has not replaced the production model. See
 └── THIRD_PARTY_NOTICES.md
 ```
 
-See [docs/en/ARCHITECTURE.md](docs/en/ARCHITECTURE.md) for the detailed data flow and
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed data flow and
 component responsibilities.
 
 ## Privacy and security
@@ -214,8 +214,8 @@ component responsibilities.
 The production build analyzes camera frames only in device memory and does not
 save or upload them. Test-build logs contain numerical model output, timestamps,
 and device information but no image, video, or audio data; they should still be
-reviewed manually before sharing. See [docs/en/PRIVACY.md](docs/en/PRIVACY.md),
-and follow [SECURITY_EN.md](SECURITY_EN.md) for security reports.
+reviewed manually before sharing. See [docs/PRIVACY.md](docs/PRIVACY.md),
+and follow [SECURITY.md](SECURITY.md) for security reports.
 
 ## Licensing
 
@@ -230,8 +230,8 @@ and follow [SECURITY_EN.md](SECURITY_EN.md) for security reports.
 GPL permits commercial use and paid distribution, but a distributor must comply
 with GPLv3 and cannot turn a derivative into closed proprietary software. Model
 weights are outside the root `LICENSE`; distribution of an APK containing the
-model must also comply with [MODEL_LICENSE_EN.md](MODEL_LICENSE_EN.md) and the relevant
+model must also comply with [MODEL_LICENSE.md](MODEL_LICENSE.md) and the relevant
 third-party terms.
 
-See [LICENSE](LICENSE), [MODEL_LICENSE_EN.md](MODEL_LICENSE_EN.md), and
-[THIRD_PARTY_NOTICES_EN.md](THIRD_PARTY_NOTICES_EN.md).
+See [LICENSE](LICENSE), [MODEL_LICENSE.md](MODEL_LICENSE.md), and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

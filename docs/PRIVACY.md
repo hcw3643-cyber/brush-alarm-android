@@ -1,41 +1,48 @@
-# 隐私说明
+# Privacy Notice
 
-[English](en/PRIVACY.md) | 简体中文
+English | [简体中文](PRIVACY.zh-CN.md)
 
-## 正式版
+## Production build
 
-当前正式版：
+The current production build:
 
-- 使用前置摄像头在设备内存中完成刷牙动作推理；
-- 不保存照片或视频；
-- 不将摄像头画面、闹钟配置或模型结果上传到服务器；
-- 不包含广告、账号、分析 SDK 或第三方追踪；
-- 闹钟配置只保存在 App 的本地 Room 数据库；
-- 禁止 Android 云备份和设备间数据迁移，不把闹钟配置交给系统备份服务；
-- 不创建或导出模型推理与闹钟事件 CSV。
+- Runs front-camera brushing inference entirely in device memory
+- Saves no photographs or video
+- Uploads no camera frames, alarm settings, or model outputs
+- Contains no advertising, accounts, analytics SDK, or third-party tracking
+- Stores alarm configuration only in the local Room database
+- Disables Android cloud backup and device-to-device transfer for app data
+- Creates and exports no model-inference or alarm-event CSV files
 
-卸载 App、清除 App 数据或换机重装会删除或重置本地闹钟设置，需要重新创建闹钟。
-模型随 App 本地安装，当前通过 ONNX Runtime CPU 后端在手机本地执行，不调用云端
-视觉服务。
+Uninstalling the app, clearing app data, or reinstalling on another device
+removes or resets local alarm settings; alarms must then be created again. The
+model is installed with the app and currently executes through the ONNX Runtime
+CPU backend; no cloud vision service is called.
 
-## 测试版
+## Test build
 
-Debug 测试包的应用名和包名与正式版区分，并可保存：
+The Debug test package has a distinct name and application ID and may save:
 
-- 时间戳、模型 ID、推理耗时、logit、置信分数、判定和进度；
-- 人工标记的“正在刷牙/未刷牙”标签；
-- 闹钟调度和触发诊断事件。
+- Timestamp, model ID, inference latency, logit, score, decision, and progress
+- Manually assigned “brushing/not brushing” labels
+- Alarm scheduling and trigger diagnostics
 
-测试日志不包含视频帧，但时间、设备行为和作息仍可能具有隐私性。分享前必须检查并
-删除个人信息，只通过维护者指定的私密通道提供。不要上传到公开 Issue。
+Test logs contain no video frame, but timestamps, device behavior, and schedules
+may still be private. Review and redact them before sharing, and use only a
+private channel designated by the maintainer. Never upload them to a public
+Issue.
 
-## 志愿者视频
+## Volunteer video
 
-视频征集只通过 [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收，并要求邮件
-正文包含明确授权确认。邮件传输和存储会经过 163.com 邮件服务商；公开仓库、Issue、
-PR 和模型 Release 都不是可接受的原始视频传输位置。原始视频不会由 App 自动采集或
-上传。当前不承诺固定的最长保存期限；删除和撤回规则见数据贡献说明。
+Video is accepted only through
+[BrushAlarm@163.com](mailto:BrushAlarm@163.com) and with explicit consent in the
+email body. Transport and mailbox storage use the 163.com email provider. The
+public repository, Issues, pull requests, and model Releases are not acceptable
+raw-video channels. The app never collects or uploads volunteer video
+automatically. No fixed maximum retention period is promised; deletion and
+withdrawal are described in the data contribution notice.
 
-详见 [`DATA_CONTRIBUTION.md`](DATA_CONTRIBUTION.md) 和可复制的
-[`DATA_CONTRIBUTION_EMAIL_TEMPLATE.md`](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md)。
-如果未来版本增加联网、崩溃上报或数据收集，本文件和 App 内提示必须在发布前同步更新。
+See [`DATA_CONTRIBUTION.md`](DATA_CONTRIBUTION.md) and the copyable
+[`DATA_CONTRIBUTION_EMAIL_TEMPLATE.md`](DATA_CONTRIBUTION_EMAIL_TEMPLATE.md).
+Any future networking, crash reporting, or data collection must update this
+notice and the in-app disclosure before release.

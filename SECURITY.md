@@ -1,25 +1,32 @@
-# 安全政策
+# Security Policy
 
-[English](SECURITY_EN.md) | 简体中文
+English | [简体中文](SECURITY.zh-CN.md)
 
-## 支持范围
+## Supported versions
 
-安全修复只保证进入最新的 `main` 和最新正式版本。实验性测试包不作为长期支持版本。
+Security fixes are only guaranteed to land in the latest `main` branch and the
+latest production release. Experimental test builds are not long-term support
+versions.
 
-## 报告漏洞
+## Reporting a vulnerability
 
-仓库公开后请使用 GitHub 的 **Private vulnerability reporting**，不要先创建公开 Issue。
-报告中请包含受影响版本、Android 版本、复现步骤、影响和可行的缓解方案。
+After the repository becomes public, use GitHub **Private vulnerability
+reporting** instead of opening a public Issue. Include the affected application
+and Android versions, reproduction steps, impact, and any practical mitigation.
 
-不要附带真实刷牙视频、浴室画面、签名密钥、访问令牌或第三人的个人信息。若必须提供
-敏感附件，请先等待维护者给出专用私密通道。
+Do not attach real brushing/bathroom video, signing keys, access tokens, or
+another person's personal information. If sensitive evidence is necessary, wait
+for the maintainer to provide a dedicated private channel.
 
-维护者将在看到报告后尽力确认，但当前项目由个人维护，不承诺固定响应时限或商业级
-服务等级。
+The maintainer will make a reasonable effort to acknowledge reports, but this is
+a personally maintained project with no fixed response time or commercial
+service-level commitment.
 
-## 安全边界
+## Security boundary
 
-本 App 不是 Device Owner、企业 Kiosk 或系统 App。具有系统“强行停止”、卸载、清除
-数据或重启到特殊模式权限的设备使用者，总能绕过闹铃流程。该限制不应作为安全漏洞
-秘密处理，但任何无需这些系统权限即可读取摄像头画面、执行代码或泄露本地数据的问题
-都应私下报告。
+This application is not a Device Owner, enterprise kiosk, or system app. A device
+user who can invoke the system “Force stop,” uninstall, clear app data, or boot
+into a special mode can always bypass the alarm flow. That platform limitation
+need not be treated as a secret vulnerability. Any issue that allows camera
+access, code execution, or local-data disclosure without such system privileges
+should be reported privately.

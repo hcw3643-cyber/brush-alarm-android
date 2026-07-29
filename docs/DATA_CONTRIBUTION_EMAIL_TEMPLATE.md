@@ -1,23 +1,28 @@
-# 刷牙视频贡献邮件模板
+# Brushing Video Contribution Email Template
 
-[English](en/DATA_CONTRIBUTION_EMAIL_TEMPLATE.md) | 简体中文
+English | [简体中文](DATA_CONTRIBUTION_EMAIL_TEMPLATE.zh-CN.md)
 
-> 收件地址：[BrushAlarm@163.com](mailto:BrushAlarm@163.com)
+> Recipient: [BrushAlarm@163.com](mailto:BrushAlarm@163.com)
 
-**邮件主题：** 刷牙闹钟数据贡献
+**Subject:** Brush Alarm data contribution
 
-**邮件正文：**
+**Body:**
 
 ```text
-我已年满 18 周岁，是视频中的本人，并有权提交该视频。我自愿允许刷牙闹钟项目维护者
-Leo Huang 存储、查看、裁剪、标注和使用本次视频来训练、验证和改进刷牙动作模型，
-并发布不包含原始视频的模型权重和汇总指标。我已阅读
-docs/DATA_CONTRIBUTION.md 中的贡献说明。
+I am at least 18 years old, I am the person shown in the video, and I have the
+right to submit it. I voluntarily allow Brush Alarm maintainer Leo Huang to
+store, view, crop, label, and use this video to train, validate, and improve the
+brushing-action model, and to publish model weights and aggregate metrics that
+do not contain the original video. I have read the contribution notice in
+docs/DATA_CONTRIBUTION.md.
 
-设备型号（可选）：
-Android/系统版本（可选）：
-场景说明（可选，例如正常刷牙、低光、停止动作或相似负样本）：
+Device model (optional):
+Android/vendor OS version (optional):
+Scene notes (optional; for example normal brushing, low light, stopped action,
+or a similar negative):
 ```
 
-附件中不要包含未成年人、未同意的旁人、地址、证件或不必要的私人环境。维护者只接受
-发送到上述邮箱、并带有明确确认的贡献。
+Attachments must not show minors, non-consenting bystanders, addresses, identity
+documents, or unnecessary private surroundings. Contributions are accepted only
+through the address above and only with explicit confirmation equivalent to the
+text above.

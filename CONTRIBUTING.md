@@ -1,50 +1,62 @@
-# 参与贡献
+# Contributing
 
-[English](CONTRIBUTING_EN.md) | 简体中文
+English | [简体中文](CONTRIBUTING.zh-CN.md)
 
-参与即表示同意遵守 [社区行为准则](CODE_OF_CONDUCT.md)。
+Participation is subject to the
+[Community Code of Conduct](CODE_OF_CONDUCT.md).
 
-感谢你帮助改进刷牙闹钟。除非另行书面说明，提交代码或文档贡献即表示你有权提交该
-内容，并同意它按仓库根目录 [LICENSE](LICENSE) 中的 GNU GPL v3.0 only
-（SPDX：`GPL-3.0-only`）提供。模型、训练数据和志愿者视频不适用这一默认条款，
-必须遵循各自的许可与同意流程。
+Thank you for helping improve Brush Alarm. Unless agreed otherwise in writing,
+submitting code or documentation means that you have the right to contribute it
+and agree to provide it under GNU GPL v3.0 only (`GPL-3.0-only`) in the root
+[LICENSE](LICENSE). That default does not cover model weights, training data, or
+volunteer video, which require their own license and consent process.
 
-## 代码贡献
+## Code contributions
 
-1. 先搜索现有 Issue，较大的行为变更请先开 Issue 讨论。
-2. 从 `main` 创建短期分支，保持一次提交只解决一个主题。
-3. 不要提交生成文件、APK、模型、密钥、日志、训练数据或个人信息。
-4. Android 改动至少运行：
+1. Search existing Issues first. Open an Issue before making a large behavioral
+   change.
+2. Create a short-lived branch from `main` and keep each commit focused on one
+   topic.
+3. Do not commit generated files, APKs, models, signing keys, logs, training
+   data, or personal information.
+4. Android changes should run at least:
 
    ```bash
    ./gradlew testDebugUnitTest testReleaseUnitTest
    ./gradlew assembleDebug assembleRelease
    ```
 
-5. 模型改动需同时更新 `docs/MODEL_CARD.md`，写明数据划分、指标、阈值、哈希和局限。
+5. Model changes must also update `docs/MODEL_CARD.md` with the split, metrics,
+   thresholds, hashes, and limitations.
 
-## Bug 与兼容性反馈
+## Bug and compatibility reports
 
-请优先使用 Issue 表单，并仅填写复现所需的设备型号、Android/系统版本和文字步骤。
-公开 Issue 中不要上传：
+Prefer the repository Issue forms. Include only the device model, Android/vendor
+OS version, and textual reproduction steps that are needed for diagnosis. Never
+upload the following to a public Issue:
 
-- 正脸或浴室视频、照片；
-- 未脱敏的 CSV、通知或设置页截图；
-- 邮箱、手机号、设备标识或精确作息；
-- 第三方无明确授权的数据。
+- Identifiable face or bathroom video and photographs
+- CSV files, notifications, or settings screenshots that have not been redacted
+- Email addresses, phone numbers, device identifiers, or precise schedules
+- Third-party data without clear authorization
 
-如需诊断数值日志，请先删除文件名和内容中的个人信息。正式版默认不生成这些日志。
+Remove personal information from diagnostic filenames and content before
+sharing. Production builds do not generate these logs by default.
 
-## 刷牙视频
+## Brushing video
 
-只接受发送到项目邮箱 [BrushAlarm@163.com](mailto:BrushAlarm@163.com)、并在邮件
-正文中包含明确授权确认的贡献；Issue、PR 和 GitHub 仓库始终不接收原始视频。详见
-[`docs/DATA_CONTRIBUTION.md`](docs/DATA_CONTRIBUTION.md)。
+Brushing video is accepted only at
+[BrushAlarm@163.com](mailto:BrushAlarm@163.com) and only with explicit consent
+in the email body. Raw video is never accepted through Issues, pull requests, or
+the Git repository. See
+[`docs/DATA_CONTRIBUTION.md`](docs/DATA_CONTRIBUTION.md).
 
-## Pull Request 检查
+## Pull request checklist
 
-- 功能与文档相符，没有暗中增加网络上传或追踪；
-- Debug 测试功能不会进入 Release；
-- 新依赖已在 `THIRD_PARTY_NOTICES.md` 记录名称、版本、用途和许可证；
-- 没有提交 `local.properties`、签名材料、模型或构建产物；
-- 对锁屏、精确闹钟、前台服务和 Direct Boot 的改动有真机验证说明。
+- Behavior matches the documentation and adds no hidden upload or tracking.
+- Debug-only test behavior cannot enter a Release build.
+- New dependencies are recorded in `THIRD_PARTY_NOTICES.md` with name, version,
+  purpose, and license.
+- No `local.properties`, signing material, model, or build output is committed.
+- Changes involving lock-screen behavior, exact alarms, foreground services, or
+  Direct Boot include a physical-device validation note.
