@@ -1,196 +1,237 @@
 <p align="center">
-  <img src="design/brush-alarm-logo-source.png" width="160" alt="刷牙闹钟 Logo">
+  <img src="design/brush-alarm-logo-source.png" width="160" alt="Brush Alarm logo">
 </p>
 
-# 刷牙闹钟
+# Brush Alarm
 
-[English](README_EN.md) | 简体中文
+English | [简体中文](README.zh-CN.md)
 
-一个只有完成刷牙动作验证后才会停止的 Android 闹钟。
+An Android alarm clock that stops only after on-device video verification
+detects that the user is brushing their teeth.
 
 > [!IMPORTANT]
-> 本项目是社区驱动的实验性自由软件，目前只在 vivo X300（Android 16 /
-> OriginOS 6）上完成端到端测试。它不是经过多品牌兼容性认证的医疗、健康或强制叫醒产品，
-> 请保留系统闹钟等备用唤醒方式。
+> This is community-driven experimental free software. End-to-end testing has
+> only been completed on a vivo X300 running Android 16 / OriginOS 6. It is not
+> a medically validated health product, has not been certified across Android
+> vendors, and cannot guarantee wake-up. Keep a system alarm or another backup.
 
-## 项目定位
+## Project scope
 
-- 软件源代码使用 [GNU GPL v3.0 only](LICENSE)；任何人可以运行、研究、修改和分发，
-  包括商业使用，但分发修改版或 APK 时必须遵守 GPLv3 的对应源码和同许可证要求。
-- `brush_classifier.onnx` 不是 GPL 软件代码，继续适用独立的
-  [模型许可和来源限制](MODEL_LICENSE.md)。软件许可证不替模型或训练数据补齐权利。
-- App 不上传摄像头画面；正式版不写入或导出推理日志。
+- The software source code is licensed under
+  [GNU GPL v3.0 only](LICENSE). Anyone may run, study, modify, and redistribute
+  it, including commercially, subject to the GPLv3 source and same-license
+  obligations for distributed derivatives and APKs.
+- `brush_classifier.onnx` is not GPL software source. It remains subject to the
+  separate [model license and provenance limitations](MODEL_LICENSE_EN.md).
+  Licensing the application does not grant missing rights to model weights or
+  training data.
+- The production app does not upload camera frames and does not write or export
+  inference logs.
 
-## 已实现
+## Implemented features
 
-- 创建、编辑、启用、停用和删除闹钟
-- 周一至周日分别选择重复日期
-- 小时/分钟滚轮
-- 持续模式：闹铃持续播放，完成刷牙验证后停止
-- 舍友模式：允许暂时静音，未完成验证时每分钟复响
-- `AlarmManager` 精确闹钟、全屏通知、前台响铃服务和 CPU 唤醒锁
-- 熄屏、划掉最近任务、设备重启和 Direct Boot 后重新登记闹钟
-- 前置摄像头端侧 ONNX 视频模型；画面只在内存中处理
-- 验证页禁用返回键、隐藏最近任务，并请求 Android“屏幕固定”
-- 独立 Debug 测试版：保留数值日志和人工标签，不与正式版数据混用
+- Create, edit, enable, disable, and delete alarms.
+- Select each repeat day from Monday through Sunday.
+- Hour and minute wheels.
+- Continuous mode: the alarm keeps sounding until brushing verification passes.
+- Roommate mode: the alarm may be silenced temporarily, but rings again every
+  minute until verification passes.
+- Exact `AlarmManager` alarms, full-screen notifications, a foreground ringing
+  service, and a CPU wake lock.
+- Alarm re-registration after screen-off operation, recent-task dismissal,
+  device reboot, and Direct Boot.
+- On-device front-camera video inference with ONNX Runtime; frames are processed
+  in memory.
+- The verification screen disables Back, hides the recent-task UI, and requests
+  Android screen pinning.
+- A separate Debug test application retains numerical inference logs and manual
+  labels without mixing them into the production build.
 
-## 已知限制
+## Known limitations
 
-- Android 厂商可额外限制自启动、后台弹出、锁屏显示和耗电行为。首次启动会集中引导
-  所需权限，之后可从首页右上角设置重新打开。
-- 普通 App 无法阻止系统“强行停止”，也无法实现 Device Owner/Kiosk 等级的完全锁定。
-- 当前模型的训练用户和真实设备覆盖不足，可能在不同面孔、牙刷、角度和光线下漏检。
-- 当前兼容性范围和测试方法见
-  [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。
+- Android vendors may impose extra restrictions on autostart, background
+  activity launches, lock-screen display, and battery usage. The first launch
+  presents a consolidated permission guide; it can later be reopened from the
+  settings button on the home screen.
+- A normal Android application cannot override a system-level “Force stop” or
+  provide Device Owner / kiosk-level lock-down.
+- The current model has limited user and real-device coverage. It may miss
+  brushing with unfamiliar faces, toothbrushes, angles, or lighting.
+- See [docs/en/COMPATIBILITY.md](docs/en/COMPATIBILITY.md) for the current compatibility
+  scope and test method.
 
-## 下载 App
+## Download the app
 
-前往
-[`v1.0.1` 发布页面](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.1)
-下载安装包。
+Download the installer from the
+[`v1.0.1` release page](https://github.com/hcw3643-cyber/brush-alarm-android/releases/tag/v1.0.1).
 
-### 选择安装包
+### Choose an APK
 
-- **推荐：**`BrushAlarm-v1.0.1-arm64-v8a.apk`
-  适用于绝大多数近年的 Android 手机，安装包更小。
-- **兼容版：**`BrushAlarm-v1.0.1-universal.apk`
-  如果推荐版本无法安装，或者不确定手机型号是否兼容，请选择此版本。
+- **Recommended:** `BrushAlarm-v1.0.1-arm64-v8a.apk`
+  Suitable for most recent Android phones and smaller in size.
+- **Compatibility version:** `BrushAlarm-v1.0.1-universal.apk`
+  Use this version if the recommended APK cannot be installed or you are unsure
+  whether your device is compatible.
 
-### 安装和初次使用
+### Installation and first use
 
-1. 下载 APK，并按照 Android 提示允许从当前来源安装；
-2. 打开 App，按照首次启动引导授予通知、摄像头和精确闹钟等权限；
-3. 根据 App 内的设置指引，允许自启动、后台运行和锁屏显示；
-4. 设置一个几分钟后响起的闹钟，分别测试锁屏和划掉最近任务后的触发效果。
+1. Download the APK and allow installation from the current source when Android
+   asks.
+2. Open the app and follow the first-launch guide to grant notification, camera,
+   and exact-alarm permissions.
+3. Follow the in-app settings guide to allow autostart, background operation,
+   and lock-screen display.
+4. Set an alarm a few minutes ahead and test it while the phone is locked and
+   after the app has been dismissed from recent tasks.
 
-刷牙识别模型已经包含在 APK 中，无需另外下载模型文件。
+The brushing-recognition model is already included in the APK. No separate model
+download is required.
 
-目前仅在 vivo X300（Android 16 / OriginOS 6）上完成完整测试，不同品牌手机的后台
-限制可能不同。在确认闹钟能够可靠触发前，请同时保留系统闹钟作为备用。
+End-to-end testing has currently been completed only on a vivo X300 running
+Android 16 / OriginOS 6. Background restrictions vary between Android vendors.
+Keep a system alarm as a backup until you have confirmed reliable operation on
+your device.
 
-## 从源码运行
+## Build from source
 
-### 1. 环境
+### 1. Requirements
 
-- Android Studio Ladybug 或更高版本
+- Android Studio Ladybug or newer
 - JDK 17
 - Android SDK 35
-- Android 8.0（API 26）或更高版本真机
+- A physical device running Android 8.0 (API 26) or newer
 
-稳定应用 ID 为 `io.github.hcw3643cyber.brushalarm`。此前使用
-`com.example.brushalarm` 的内部测试包不会被识别为同一个 App，闹钟配置也不会自动迁移。
+The stable application ID is `io.github.hcw3643cyber.brushalarm`. Earlier
+internal builds used `com.example.brushalarm`; Android treats those as a
+different application and does not migrate alarm settings.
 
+### 2. Fetch the model
 
-### 2. 获取模型
-
-模型不放入 Git 历史，而是作为独立 Release 资产发布。将
-`brush_classifier.onnx` 下载到：
+The model is not committed to Git history. It is distributed as a separate
+GitHub Release asset and must be placed at:
 
 ```text
 app/src/main/assets/brush_classifier.onnx
 ```
 
-可使用：
-
 ```bash
 ./scripts/fetch-model.sh
 ```
 
-Windows PowerShell：
+On Windows PowerShell:
 
 ```powershell
 .\scripts\fetch-model.ps1
 ```
 
-可以从 `model-v1.0.1` Release 手工下载。模型来源、输入格式、指标和限制见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)。
+It can also be downloaded manually from the `model-v1.0.1` Release. See
+[docs/en/MODEL_CARD.md](docs/en/MODEL_CARD.md) for provenance, input format, metrics,
+and limitations.
 
-### 3. 构建
+### 3. Build
 
 ```bash
 ./gradlew testDebugUnitTest testReleaseUnitTest
 ./gradlew assembleDebug assembleRelease
 ```
 
-- `debug`：独立测试包，版本名带 `-test`，包含数值日志和人工标签。
-- `release`：正式功能包，不创建推理/闹钟诊断 CSV，也不显示导出入口。
+- `debug`: separate test package with a `-test` version suffix, numerical logs,
+  and manual labels.
+- `release`: production package with no inference/alarm CSV generation and no
+  log-export UI.
 
-默认使用 Google、Maven Central 和 Gradle 官方仓库。网络受限时，可以只在自己的
-`~/.gradle/gradle.properties` 中加入以下配置启用项目内预设的国内镜像，不要提交该
-本机配置：
+The build uses the official Google, Maven Central, and Gradle repositories by
+default. If those services are inaccessible from your network, enable the
+project's optional mainland-China mirrors only in your local
+`~/.gradle/gradle.properties` (do not commit that machine-local setting):
 
 ```properties
 brushAlarm.useChinaMirrors=true
 ```
-## 识别模型概要
 
-输入为最近约两秒的动作窗口：
+## Current recognition model
 
-- 16 帧 RGB
-- 8 fps 时间戳采样，窗口跨度约 1.875 秒
-- 每帧中心裁剪并缩放到 192×192
-- 每 0.5 秒产生一个重叠窗口结果
-- 高/低置信度门限为 0.65/0.10
-- 需要累计 6 秒高置信度证据
+The current S3D model receives an approximately two-second motion window:
 
-模型以 TorchVision S3D/Kinetics-400 权重为基础，在 UCF101 刷牙和困难负样本上微调，
-并使用一段经维护者同意的真机视频做域适配。第三方数据条款并不完全明确，因此模型
-作为独立实验性资产发布，不宣称获得 UCF101 原始视频的再分发权，也不包含任何
-原始训练视频。详见 [docs/MODEL_CARD.md](docs/MODEL_CARD.md) 和
-[MODEL_LICENSE.md](MODEL_LICENSE.md)。
+- 16 RGB frames
+- Timestamp-based sampling at 8 fps, spanning approximately 1.875 seconds
+- Center crop and resize to 192×192
+- One overlapping-window prediction every 0.5 seconds
+- High/low confidence thresholds of 0.65/0.10
+- Six seconds of accumulated high-confidence evidence required
 
-MoViNet A0 已完成相同 UCF 划分上的训练、流式 TFLite 导出和数值一致性验证。它的
-视频级 F1 为 93.67%，接近当前 S3D 的 93.83%；理论计算量约低 65 倍，但尚未经过
-真机域验证，也尚未接入正式 App。详见
-[training/MOVINET_A0.md](training/MOVINET_A0.md)。
+It starts from TorchVision S3D/Kinetics-400 weights, is fine-tuned on UCF101
+brushing and hard-negative classes, and receives limited domain adaptation from
+one maintainer-consented phone recording. The third-party dataset terms are not
+fully explicit. The model is therefore released as a separate experimental
+asset, does not claim redistribution rights to UCF101 source videos, and
+contains no source training recordings. See
+[docs/en/MODEL_CARD.md](docs/en/MODEL_CARD.md) and
+[MODEL_LICENSE_EN.md](MODEL_LICENSE_EN.md).
 
-## 参与项目
+MoViNet A0 has completed training on the same UCF split, streaming TFLite
+export, and numerical parity checks. Its video-level F1 is 93.67%, close to
+S3D's 93.83%, at roughly 65 times fewer theoretical operations. It still lacks
+phone-domain validation and has not replaced the production model. See
+[training/MOVINET_A0_EN.md](training/MOVINET_A0_EN.md).
 
-- 一般 Bug、设备兼容性和数值模型反馈请使用仓库 Issue 表单。
-- 不要把正脸视频、浴室画面、原始日志或其他个人信息上传到公开 Issue、PR 或仓库。
-- 志愿者刷牙视频征集已开放，只通过项目邮箱
-  [BrushAlarm@163.com](mailto:BrushAlarm@163.com) 接收；发送前必须阅读并在邮件中
-  明确接受数据贡献说明。
-- 代码贡献规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-- 社区交流遵循 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
-- 数据贡献原则见
-  [docs/DATA_CONTRIBUTION.md](docs/DATA_CONTRIBUTION.md)。
+## Contributing
 
-## 项目结构
+- Use the repository Issue forms for general bugs, device compatibility, and
+  numerical model feedback.
+- Never upload identifiable face video, bathroom footage, raw logs, or other
+  personal data to a public Issue, pull request, or Git repository.
+- Volunteer brushing-video collection is open only through
+  [BrushAlarm@163.com](mailto:BrushAlarm@163.com). Read the data contribution
+  notice and include its explicit confirmation before sending anything.
+- Code contribution rules: [CONTRIBUTING_EN.md](CONTRIBUTING_EN.md)
+- Community participation: [CODE_OF_CONDUCT_EN.md](CODE_OF_CONDUCT_EN.md)
+- Data contribution principles:
+  [docs/en/DATA_CONTRIBUTION.md](docs/en/DATA_CONTRIBUTION.md)
+
+## Repository layout
 
 ```text
 .
-├── app/                 Android App、资源和测试
-├── training/            训练、标定和 ONNX 导出脚本
-├── scripts/             模型下载与发布前检查脚本
-├── docs/                架构、兼容性、模型、隐私和数据贡献文档
-├── design/              Logo 源文件
-├── .github/             Issue 表单
-├── README_EN.md         English README
-├── LICENSE              GNU GPL v3.0 软件许可证
-├── MODEL_LICENSE.md     模型权重许可边界
+├── app/                 Android application, resources, and tests
+├── training/            Training, calibration, and model export code
+├── scripts/             Model download and pre-release audit scripts
+├── docs/                Architecture, compatibility, model, privacy, and data docs
+├── design/              Logo source
+├── .github/             Issue forms
+├── README.md            English README
+├── README.zh-CN.md      Chinese README
+├── LICENSE              GNU GPL v3.0 software license
+├── MODEL_LICENSE.md     Model-weight licensing boundary
 └── THIRD_PARTY_NOTICES.md
 ```
 
-更详细的数据流和组件职责见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+See [docs/en/ARCHITECTURE.md](docs/en/ARCHITECTURE.md) for the detailed data flow and
+component responsibilities.
 
-## 隐私与安全
+## Privacy and security
 
-正式版摄像头帧只在手机内存中实时分析，不保存、不上传。测试版日志只包含模型数值、
-时间和设备信息，不包含图像、视频或音频，但分享前仍应人工检查。完整说明见
-[docs/PRIVACY.md](docs/PRIVACY.md)；安全问题请遵循 [SECURITY.md](SECURITY.md)。
+The production build analyzes camera frames only in device memory and does not
+save or upload them. Test-build logs contain numerical model output, timestamps,
+and device information but no image, video, or audio data; they should still be
+reviewed manually before sharing. See [docs/en/PRIVACY.md](docs/en/PRIVACY.md),
+and follow [SECURITY_EN.md](SECURITY_EN.md) for security reports.
 
-## 许可
+## Licensing
 
-- 维护者：Leo Huang
-- 本项目原创软件代码、仓库文档与原创美术资源：GNU GPL v3.0 only
-  （SPDX：`GPL-3.0-only`）
-- 当前模型中项目方可许可的部分：CC BY-NC 4.0
-- 第三方组件和基础权重：保持各自原始条款
-- Logo 和“刷牙闹钟”名称不随软件许可证授予商标或冒充官方版本的权利
+- Maintainer: Leo Huang
+- Original software, repository documentation, and original artwork:
+  GNU GPL v3.0 only (`GPL-3.0-only`)
+- Project-licensable portions of the current model: CC BY-NC 4.0
+- Third-party components and base weights: their original terms remain in force
+- The logo and “Brush Alarm” name do not grant trademark rights or permission to
+  impersonate an official build
 
-GPL 允许商业使用和收费分发，但分发者必须履行 GPLv3，不能把该软件的衍生版本改成
-闭源专有软件。模型权重不包含在根目录 `LICENSE` 的授权范围内；分发包含模型的 APK
-前还必须分别确认并遵守 [MODEL_LICENSE.md](MODEL_LICENSE.md) 及第三方来源条款。
+GPL permits commercial use and paid distribution, but a distributor must comply
+with GPLv3 and cannot turn a derivative into closed proprietary software. Model
+weights are outside the root `LICENSE`; distribution of an APK containing the
+model must also comply with [MODEL_LICENSE_EN.md](MODEL_LICENSE_EN.md) and the relevant
+third-party terms.
 
-详情见 [LICENSE](LICENSE)、[MODEL_LICENSE.md](MODEL_LICENSE.md) 和
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+See [LICENSE](LICENSE), [MODEL_LICENSE_EN.md](MODEL_LICENSE_EN.md), and
+[THIRD_PARTY_NOTICES_EN.md](THIRD_PARTY_NOTICES_EN.md).
