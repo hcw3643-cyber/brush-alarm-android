@@ -56,7 +56,7 @@ class AlarmSessionCoreTest {
     @Test fun recoveryDeadlineDoesNotSlideOnRepeatedReconcile() {
         val initial = enqueue()
         val deadline = initial.current!!.recoveryAtElapsed
-        assertEquals(deadline, AlarmSessionCore.reconcile(initial, SessionTime(7, 20_000)).current!!.recoveryAtElapsed)
+        assertEquals(deadline, AlarmSessionCore.reconcile(initial, SessionTime(7, deadline - 1)).current!!.recoveryAtElapsed)
         assertTrue(AlarmSessionCore.reconcile(initial, SessionTime(7, deadline)).current!!.recoveryAtElapsed > deadline)
     }
     @Test fun quietUsesMonotonicClockAndCompletionWinsOverRecovery() {
@@ -99,4 +99,57 @@ class AlarmSessionCoreTest {
         assertEquals(900L, NormalOccurrencePolicy.restoreAt(900, false, 800, now = 500, recomputeFuture = false))
         assertEquals(800L, NormalOccurrencePolicy.restoreAt(400, true, 800, now = 500, recomputeFuture = true))
     }
+
+    @Test fun interruptedRingingRequestsRecoveryWithoutChangingTask() {
+        val ringing = enqueue()
+        val before = ringing.copy()
+        assertEquals(now.elapsed + 2_000L, AlarmSessionCore.interruptionRecoveryAt(ringing, now))
+        assertEquals(before, ringing)
+        assertFalse(ringing.current!!.quietUsed)
+    }
+
+    @Test fun interruptedQuietKeepsOriginalDeadlineAndAllowance() {
+        val quiet = AlarmSessionCore.quiet(enqueue(), "first", now)
+        val later = SessionTime(7, 40_000L)
+        assertEquals(61_000L, AlarmSessionCore.interruptionRecoveryAt(quiet, later))
+        assertTrue(quiet.current!!.quietUsed)
+        assertEquals(61_000L, quiet.current!!.quietUntilElapsed)
+        assertEquals(61_000L, AlarmSessionCore.interruptionRecoveryAt(quiet, SessionTime(7, 60_999L)))
+    }
+
+    @Test fun interruptionAfterQuietExpirationUsesFastRecovery() {
+        val quiet = AlarmSessionCore.quiet(enqueue(), "first", now)
+        assertEquals(63_000L, AlarmSessionCore.interruptionRecoveryAt(quiet, SessionTime(7, 61_000L)))
+        assertTrue(quiet.current!!.quietUsed)
+    }
+
+    @Test fun interruptionCannotReviveCompletedTask() {
+        assertNull(AlarmSessionCore.interruptionRecoveryAt(SessionState(), now))
+        val completed = AlarmSessionCore.complete(enqueue(), "first", now)
+        assertNull(AlarmSessionCore.interruptionRecoveryAt(completed, now))
+    }
+
+    @Test fun shorterRecoveryCapsPersistedOldDeadlineWithoutSlidingForward() {
+        val initial = enqueue()
+        val old = initial.copy(queue = listOf(initial.current!!.copy(recoveryAtElapsed = 16_000L)))
+        val capped = AlarmSessionCore.reconcile(old, now)
+        assertEquals(3_000L, capped.current!!.recoveryAtElapsed)
+        assertEquals(3_000L, AlarmSessionCore.reconcile(capped, SessionTime(7, 2_000L)).current!!.recoveryAtElapsed)
+        assertEquals(old.current!!.token, capped.current!!.token)
+    }
+
+    @Test fun frequentRecoveryKeepsQuietDeadlineAndCompletionWins() {
+        var state = AlarmSessionCore.quiet(enqueue(), "first", now)
+        for (elapsed in 3_000L..59_000L step 2_000L) {
+            val time = SessionTime(7, elapsed)
+            state = AlarmSessionCore.reconcile(state, time)
+            assertEquals("first", state.current!!.token)
+            assertTrue(state.current!!.quietUsed)
+            assertEquals(61_000L, state.current!!.quietUntilElapsed)
+            assertEquals(AlarmOutputKind.NONE, AlarmOutputPolicy.choose(state.current, time, 5))
+        }
+        val completed = AlarmSessionCore.complete(state, "first", SessionTime(7, 60_999L))
+        assertNull(AlarmSessionCore.reconcile(completed, SessionTime(7, 63_000L)).current)
+    }
+
 }

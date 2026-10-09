@@ -140,8 +140,11 @@ class AlarmOutput(private val context: Context) {
             return
         }
         runCatching {
-            // Finite waveform, periodically renewed. A competing vibration cannot disable us forever.
-            val effect = VibrationEffect.createWaveform(longArrayOf(0, 450, 650, 450, 1_200), -1)
+            // The vibrator owns repetition even while the app's monitor is delayed.
+            // Request maximum amplitude: 800 ms on, 200 ms off, continuously.
+            val effect = VibrationEffect.createWaveform(
+                longArrayOf(0, 800, 200), intArrayOf(0, 255, 0), 0
+            )
             if (Build.VERSION.SDK_INT >= 33) {
                 hardware.vibrate(effect, VibrationAttributes.Builder()
                     .setUsage(VibrationAttributes.USAGE_ALARM).build())
@@ -150,8 +153,8 @@ class AlarmOutput(private val context: Context) {
                 hardware.vibrate(effect, attributes)
             }
             vibrating = true
-            vibrationAt = elapsed + 3_000
-            AlarmDiagnosticLog.record(context, "vibration_requested", details = "token=$token hardware=true")
+            vibrationAt = elapsed + 30_000
+            AlarmDiagnosticLog.record(context, "vibration_requested", details = "token=$token hardware=true amplitude_control=${hardware.hasAmplitudeControl()} amplitude=255 on_ms=800 off_ms=200 repeat=true")
         }.onFailure {
             recordError("vibration_failed", it)
             retryAt = android.os.SystemClock.elapsedRealtime() + 5_000

@@ -17,14 +17,15 @@ class AlarmReceiver : BroadcastReceiver() {
             var transferred = false
             try {
                 val token = intent.getStringExtra(AlarmSessionScheduler.EXTRA_TOKEN)
-                AlarmDiagnosticLog.record(context, "receiver_delivered", id,
-                    "action=${intent.action} token=$token at=$at delay_ms=${System.currentTimeMillis() - at}")
+                recordDelivery(context, "receiver_delivered", intent)
                 val state = if (intent.action == AlarmSessionScheduler.ACTION_REPAIR_NORMAL) {
                     AlarmSessionCoordinator.reconcile(context, forceSchedule = true)
                 } else if (intent.action in SESSION_ACTIONS) {
                     // Late actions cannot mutate or revive another session.
                     val current = AlarmSessionStore.read(context).current
                     if (token == null || token != current?.token) return@launch
+                    if (intent.action == AlarmSessionScheduler.ACTION_FAST_RECOVERY)
+                        AlarmSessionScheduler.cancelFastRecovery(context, token)
                     if (intent.action == AlarmSessionScheduler.ACTION_QUIET)
                         AlarmSessionCoordinator.quiet(context, token)
                     else AlarmSessionCoordinator.reconcile(context, forceSchedule = true)
@@ -50,7 +51,24 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_ID = "alarm_id"
         const val EXTRA_TRIGGER_AT = "alarm_trigger_at"
+        const val EXTRA_ELAPSED_AT = "alarm_elapsed_at"
+
+        fun recordDelivery(context: Context, event: String, intent: Intent) {
+            val at = intent.getLongExtra(EXTRA_TRIGGER_AT, -1)
+            val elapsedAt = intent.getLongExtra(EXTRA_ELAPSED_AT, -1)
+            val delay = when {
+                elapsedAt >= 0 -> (android.os.SystemClock.elapsedRealtime() - elapsedAt).toString()
+                at >= 0 -> (System.currentTimeMillis() - at).toString()
+                else -> "unknown"
+            }
+            val power = context.getSystemService(android.os.PowerManager::class.java)
+            AlarmDiagnosticLog.record(context, event, intent.getLongExtra(EXTRA_ID, -1),
+                "action=${intent.action} token=${intent.getStringExtra(AlarmSessionScheduler.EXTRA_TOKEN)} " +
+                    "at=$at elapsed_at=$elapsedAt delay_ms=$delay pid=${android.os.Process.myPid()} interactive=${power.isInteractive} " +
+                    "idle=${power.isDeviceIdleMode} battery_unrestricted=${power.isIgnoringBatteryOptimizations(context.packageName)}")
+        }
         private val SESSION_ACTIONS = setOf(AlarmSessionScheduler.ACTION_RECOVERY,
+            AlarmSessionScheduler.ACTION_FAST_RECOVERY,
             AlarmSessionScheduler.ACTION_QUIET_END, AlarmSessionScheduler.ACTION_REBOOT_REMINDER,
             AlarmSessionScheduler.ACTION_QUIET)
     }

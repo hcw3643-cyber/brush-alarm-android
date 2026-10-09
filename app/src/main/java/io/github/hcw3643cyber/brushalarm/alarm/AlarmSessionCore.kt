@@ -39,7 +39,16 @@ data class SessionState(
 
 object AlarmSessionCore {
     const val QUIET_MS = 60_000L
-    const val RECOVERY_MS = 60_000L // Best effort; Android may defer this in Doze.
+    const val RECOVERY_MS = 2_000L // Best effort; Android may defer this in Doze.
+    const val FAST_RECOVERY_MS = 2_000L
+    private const val NORMAL_REPAIR_MS = 60_000L
+
+    /** A task dismissal must neither spend nor shorten the user's existing quiet minute. */
+    fun interruptionRecoveryAt(state: SessionState, time: SessionTime): Long? {
+        val current = state.current ?: return null
+        val quietRemaining = current.quietRemaining(time)
+        return time.elapsed + if (quietRemaining > 0) quietRemaining else FAST_RECOVERY_MS
+    }
 
     fun enqueue(state: SessionState, session: AlarmSession, time: SessionTime): SessionState {
         if (state.queue.any { it.occurrenceKey == session.occurrenceKey } ||
@@ -54,7 +63,7 @@ object AlarmSessionCore {
     fun reconcile(state: SessionState, time: SessionTime): SessionState {
         val repairAt = if (state.pendingNext.isEmpty()) 0 else
             if (state.normalRepairBoot != time.boot || state.normalRepairAtElapsed <= time.elapsed)
-                time.elapsed + RECOVERY_MS else state.normalRepairAtElapsed
+                time.elapsed + NORMAL_REPAIR_MS else state.normalRepairAtElapsed
         val repairBoot = if (state.pendingNext.isEmpty()) -1 else time.boot
         val normalized = if (repairAt == state.normalRepairAtElapsed && repairBoot == state.normalRepairBoot) state
             else state.copy(revision = state.revision + 1, normalRepairBoot = repairBoot, normalRepairAtElapsed = repairAt)
@@ -64,7 +73,7 @@ object AlarmSessionCore {
             quietUntilElapsed = if (current.boot == time.boot && current.quietUntilElapsed > time.elapsed)
                 current.quietUntilElapsed else 0,
             recoveryAtElapsed = if (current.boot != time.boot || current.recoveryAtElapsed <= time.elapsed)
-                time.elapsed + RECOVERY_MS else current.recoveryAtElapsed,
+                time.elapsed + RECOVERY_MS else minOf(current.recoveryAtElapsed, time.elapsed + RECOVERY_MS),
             rebootReminderElapsed = if (current.boot != time.boot) time.elapsed + 1_000L
                 else current.rebootReminderElapsed
         )

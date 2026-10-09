@@ -26,6 +26,7 @@ class AlarmService : Service() {
     override fun onCreate() {
         super.onCreate()
         output = AlarmOutput(this)
+        AlarmDiagnosticLog.record(this, "service_created", details = "pid=${android.os.Process.myPid()}")
         val channel = NotificationChannel(CHANNEL_ID, "正在响铃", NotificationManager.IMPORTANCE_HIGH).apply {
             description = "刷牙闹钟响铃通知"
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
@@ -57,11 +58,27 @@ class AlarmService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        // Foreground promotion precedes diagnostic file IO and async state work.
+        intent?.let { AlarmReceiver.recordDelivery(this, "service_delivered", it) }
         AlarmDiagnosticLog.record(this, "service_start_command", details = "action=${intent?.action}")
         scope.launch {
             try {
                 val token = intent?.getStringExtra(AlarmSessionScheduler.EXTRA_TOKEN)
                 val state = when (intent?.action) {
+                    AlarmScheduler.ACTION_ALARM_CLOCK -> {
+                        val id = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
+                        val at = intent.getLongExtra(AlarmReceiver.EXTRA_TRIGGER_AT, -1)
+                        if (id >= 0 && at >= 0) AlarmSessionCoordinator.receive(this@AlarmService, id, at)
+                        else AlarmSessionCoordinator.reconcile(this@AlarmService)
+                    }
+                    AlarmSessionScheduler.ACTION_FAST_RECOVERY -> {
+                        token?.let { AlarmSessionScheduler.cancelFastRecovery(this@AlarmService, it) }
+                        AlarmSessionCoordinator.reconcile(this@AlarmService, forceSchedule = true)
+                    }
+                    AlarmSessionScheduler.ACTION_RECOVERY,
+                    AlarmSessionScheduler.ACTION_QUIET_END,
+                    AlarmSessionScheduler.ACTION_REBOOT_REMINDER ->
+                        AlarmSessionCoordinator.reconcile(this@AlarmService, forceSchedule = true)
                     ACTION_QUIET -> if (token != null) AlarmSessionCoordinator.quiet(this@AlarmService, token)
                         else AlarmSessionCoordinator.reconcile(this@AlarmService)
                     ACTION_VERIFIED -> if (token != null) AlarmSessionCoordinator.complete(this@AlarmService, token)
@@ -70,8 +87,16 @@ class AlarmService : Service() {
                 }
                 applyState(state)
                 if (state.current != null && monitor?.isActive != true) startMonitor()
+                runCatching { AlarmSessionCoordinator.repairNormal(this@AlarmService) }
+                    .onFailure { AlarmSessionCoordinator.failure(this@AlarmService, "service_next_schedule_failed", it) }
             } catch (error: Exception) {
                 AlarmSessionCoordinator.failure(this@AlarmService, "service_reconcile_failed", error)
+                if (intent?.action == AlarmScheduler.ACTION_ALARM_CLOCK) {
+                    val id = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
+                    val at = intent.getLongExtra(AlarmReceiver.EXTRA_TRIGGER_AT, -1)
+                    if (id >= 0 && at >= 0) runCatching { AlarmScheduler.retryOccurrence(this@AlarmService, id, at) }
+                        .onFailure { AlarmSessionCoordinator.failure(this@AlarmService, "service_occurrence_retry_failed", it) }
+                }
                 output.stop()
                 releaseWakeLock()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -169,19 +194,27 @@ class AlarmService : Service() {
         return builder.build()
     }
 
+    private fun armInterruptionRecovery(reason: String) {
+        val state = AlarmSessionStore.states.value ?: latest ?: return
+        runCatching { AlarmSessionScheduler.armInterruptionRecovery(this, state, reason) }
+            .onFailure { AlarmSessionCoordinator.failure(this, "interruption_recovery_failed", it) }
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
-        scope.launch {
-            runCatching { AlarmSessionCoordinator.reconcile(this@AlarmService, forceSchedule = true) }
-                .onFailure { AlarmSessionCoordinator.failure(this@AlarmService, "task_removed_reconcile_failed", it) }
-        }
+        // Register immediately, rather than launching a coroutine in a scope the OS may kill.
+        armInterruptionRecovery("task_removed")
+        AlarmDiagnosticLog.record(this, "service_task_removed", details =
+            "pid=${android.os.Process.myPid()} token=${(AlarmSessionStore.states.value ?: latest)?.current?.token}")
         super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
+        // Completed state has no current task, so intentional completion never rearms.
+        armInterruptionRecovery("service_destroyed")
         output.stop()
         releaseWakeLock()
         scope.cancel()
-        AlarmDiagnosticLog.record(this, "service_destroyed", details = "token=${latest?.current?.token}")
+        AlarmDiagnosticLog.record(this, "service_destroyed", details = "pid=${android.os.Process.myPid()} token=${(AlarmSessionStore.states.value ?: latest)?.current?.token}")
         super.onDestroy()
     }
     override fun onBind(intent: Intent?): IBinder? = null

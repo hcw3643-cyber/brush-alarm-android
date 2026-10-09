@@ -75,11 +75,21 @@ object AlarmScheduler {
             existingPendingIntent(context, alarm.id, action)?.let(manager::cancel)
         }
         legacyPendingIntent(context, alarm.id)?.let(manager::cancel)
-        val intent = alarmIntent(context, alarm.id, at, ACTION_ALARM_CLOCK)
-        val pending = PendingIntent.getBroadcast(
-            context, alarm.id.toInt(), intent,
+        // Remove the previous broadcast-only primary when upgrading in place.
+        PendingIntent.getBroadcast(context, alarm.id.toInt(),
+            alarmIntent(context, alarm.id, at, ACTION_ALARM_CLOCK),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)?.let {
+            manager.cancel(it); it.cancel()
+        }
+        val pending = PendingIntent.getForegroundService(
+            context, alarm.id.toInt(), alarmServiceIntent(context, alarm.id, at),
             PendingIntent.FLAG_IMMUTABLE
         )
+        // Without exact-alarm access a service start has no exact-alarm exemption.
+        val fallback by lazy {
+            PendingIntent.getBroadcast(context, alarm.id.toInt(),
+                alarmIntent(context, alarm.id, at, ACTION_ALARM_CLOCK), PendingIntent.FLAG_IMMUTABLE)
+        }
         var exact = Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms()
         var elapsedWatchdog = false
         if (exact) {
@@ -98,7 +108,7 @@ object AlarmScheduler {
                 AlarmSessionCoordinator.failure(context, "normal_exact_schedule_failed", failure)
                 // Exact-alarm access can be revoked between the permission check
                 // and this call. Keep a best-effort alarm instead of losing it.
-                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, fallback)
                 exact = false
             }
             if (exact) {
@@ -123,13 +133,13 @@ object AlarmScheduler {
                 }.onFailure { AlarmSessionCoordinator.failure(context, "normal_elapsed_schedule_failed", it) }
             }
         } else {
-            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, fallback)
         }
         AlarmDiagnosticLog.record(
             context,
             event = "scheduled",
             alarmId = alarm.id,
-            details = "trigger_at=$at exact=$exact elapsed_watchdog=$elapsedWatchdog"
+            details = "trigger_at=$at exact=$exact elapsed_watchdog=$elapsedWatchdog primary=${if (exact) "foreground_service" else "broadcast_fallback"}"
         )
         return ScheduleResult(at, exact, elapsedWatchdog)
     }
@@ -154,12 +164,21 @@ object AlarmScheduler {
     private fun alarmIntent(context: Context, id: Long, at: Long, action: String) =
         Intent(context, AlarmReceiver::class.java)
             .setAction(action)
+            .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             .setData(Uri.parse("brushalarm://occurrence/$id/$at/${Uri.encode(action)}"))
             .putExtra(AlarmReceiver.EXTRA_ID, id)
             .putExtra(AlarmReceiver.EXTRA_TRIGGER_AT, at)
 
+    private fun alarmServiceIntent(context: Context, id: Long, at: Long) =
+        alarmIntent(context, id, at, ACTION_ALARM_CLOCK)
+            .setClass(context, AlarmService::class.java).setFlags(0)
+
     private fun cancelOccurrence(context: Context, id: Long, at: Long) {
         val manager = context.getSystemService(AlarmManager::class.java)
+        PendingIntent.getForegroundService(context, id.toInt(), alarmServiceIntent(context, id, at),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)?.let {
+            manager.cancel(it); it.cancel()
+        }
         listOf(ACTION_ALARM_CLOCK, ACTION_ELAPSED_WATCHDOG).forEach { action ->
             PendingIntent.getBroadcast(context, id.toInt(), alarmIntent(context, id, at, action),
                 PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)?.let {
@@ -173,8 +192,8 @@ object AlarmScheduler {
     fun retryOccurrence(context: Context, id: Long, occurrenceAt: Long) {
         val show = PendingIntent.getActivity(context, id.toInt(), Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val operation = PendingIntent.getBroadcast(context, id.toInt(),
-            alarmIntent(context, id, occurrenceAt, ACTION_ALARM_CLOCK), PendingIntent.FLAG_IMMUTABLE)
+        val operation = PendingIntent.getForegroundService(context, id.toInt(),
+            alarmServiceIntent(context, id, occurrenceAt), PendingIntent.FLAG_IMMUTABLE)
         context.getSystemService(AlarmManager::class.java).setAlarmClock(
             AlarmManager.AlarmClockInfo(System.currentTimeMillis() + 5_000, show), operation)
     }

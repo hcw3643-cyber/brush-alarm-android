@@ -17,6 +17,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -27,6 +29,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -37,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -57,7 +63,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     private val alarms = mutableStateListOf<AlarmEntity>()
@@ -96,7 +101,7 @@ class MainActivity : ComponentActivity() {
         AlarmDiagnosticLog.record(
             this,
             event = "app_resumed",
-            details = "manufacturer=${Build.MANUFACTURER} " +
+            details = "manufacturer=${Build.MANUFACTURER} app_version=${BuildConfig.VERSION_NAME} pid=${android.os.Process.myPid()} " +
                 "battery_unrestricted=$batteryUnrestricted " +
                 "full_screen=$fullScreenAlarmAllowed"
         )
@@ -133,56 +138,178 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun AlarmHome() {
-        if (showPermissionGuide) {
-            PermissionGuideDialog()
-        }
+        if (showPermissionGuide) PermissionGuideDialog()
         if (showTimeEditor) {
             val now = java.time.LocalTime.now()
             WheelTimePickerDialog(
                 initialHour = editingAlarm?.hour ?: now.hour,
                 initialMinute = editingAlarm?.minute ?: now.minute,
+                initialMode = editingAlarm?.mode ?: AlarmMode.CONTINUOUS,
+                initialWeekdays = editingAlarm?.weekdays ?: 0b1111111,
                 onDismiss = { showTimeEditor = false },
-                onConfirm = { hour, minute ->
-                    saveTime(editingAlarm, hour, minute)
+                onDelete = editingAlarm?.let { alarm ->
+                    { delete(alarm); showTimeEditor = false }
+                },
+                onConfirm = { hour, minute, mode, weekdays ->
+                    saveTime(editingAlarm, hour, minute, mode, weekdays)
                     showTimeEditor = false
                 }
             )
         }
         Scaffold(
-            containerColor = Color(0xFFF4F0E6),
-            floatingActionButton = {
-                ExtendedFloatingActionButton(
-                    text = { Text("添加闹钟") },
-                    icon = { Icon(Icons.Default.Add, null) },
-                    onClick = { openTimeEditor(null) }
-                )
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.background)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 22.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Button(
+                        onClick = { openTimeEditor(null) },
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null, Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("添加闹钟", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Text(
+                        "完成刷牙验证，结束本次提醒",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 14.dp)
+                    )
+                }
             }
         ) { padding ->
-            Column(Modifier.padding(padding).padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("刷牙闹钟", fontSize = 32.sp)
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = { showPermissionGuide = true }) {
-                        Icon(Icons.Default.Settings, "权限与可靠性设置")
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 12.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("刷牙闹钟", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "让一天从认真刷牙开始",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                        }
+                        Surface(shape = RoundedCornerShape(15.dp), color = MaterialTheme.colorScheme.surface) {
+                            IconButton(onClick = { showPermissionGuide = true }) {
+                                Icon(Icons.Default.Settings, "权限与可靠性设置", Modifier.size(21.dp))
+                            }
+                        }
                     }
                 }
-                Text(
-                    "起床不是按掉闹钟，是完成刷牙。",
-                    color = Color(0xFF58635F),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-                TestHomeControls(this@MainActivity)
-                if (alarms.isEmpty()) {
-                    Card(colors = CardDefaults.cardColors(Color.White)) {
+                item { NextAlarmCard() }
+                item {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("我的闹钟", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.weight(1f))
                         Text(
-                            "还没有闹钟。添加一个时间，并选择持续响铃或舍友模式。",
-                            Modifier.padding(24.dp)
+                            "已开启 ${alarms.count { it.enabled }} 个",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
                         )
                     }
                 }
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(alarms, key = { it.id }) { alarm -> AlarmCard(alarm) }
-                    item { Spacer(Modifier.height(80.dp)) }
+                if (alarms.isEmpty()) {
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(24.dp)) {
+                                Text("安排你的第一个早晨", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                                Text(
+                                    "添加一个时间，选择持续响铃或舍友模式。",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                items(alarms, key = { it.id }) { alarm -> AlarmCard(alarm) }
+            }
+        }
+    }
+
+    @Composable
+    private fun NextAlarmCard() {
+        val next = alarms.filter { it.enabled && it.nextTriggerAt > 0 }.minByOrNull { it.nextTriggerAt }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(22.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Alarm, null,
+                        Modifier.size(17.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        "下一次提醒${next?.let { " · ${formatNextDay(it.nextTriggerAt)}" } ?: ""}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (next != null) {
+                    Text(
+                        "%02d:%02d".format(next.hour, next.minute),
+                        fontSize = 64.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-3).sp,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "起床，开始新的一天",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surface) {
+                            Text(
+                                modeLabel(next.mode), fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                    if (!exactAlarmAllowed) {
+                        TextButton(onClick = { showPermissionGuide = true }, contentPadding = PaddingValues(0.dp)) {
+                            Text("开启闹钟权限，让提醒更准时", fontSize = 12.sp)
+                        }
+                    }
+                } else {
+                    Text(
+                        if (alarms.any { it.enabled }) "正在准备提醒" else "给明天一个好开始",
+                        fontSize = 25.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 10.dp)
+                    )
+                    Text(
+                        if (alarms.any { it.enabled }) "提醒时间准备好后会显示在这里"
+                        else if (alarms.isEmpty()) "从下方添加你的第一个闹钟"
+                        else "开启一个闹钟，下次提醒会显示在这里",
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -239,8 +366,9 @@ class MainActivity : ComponentActivity() {
                     if (isVivo) {
                         PermissionStep(
                             "vivo 厂商权限",
-                            "请在应用权限中开启“自启动、后台弹出界面、锁屏显示”，" +
-                                "并在电池设置中选择“允许后台高耗电”。",
+                            "请在应用权限中同时开启“自启动、关联启动、后台弹出界面、锁屏显示”，" +
+                                "并在电池设置中选择“允许后台高耗电”。关联启动关系到熄屏时能否" +
+                                "由系统启动闹钟；测试版和正式版需要分别设置。",
                             null,
                             "应用设置"
                         ) { openAppSettings() }
@@ -258,6 +386,7 @@ class MainActivity : ComponentActivity() {
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    TestHomeControls(this@MainActivity)
                 }
             },
             dismissButton = {
@@ -307,68 +436,51 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun AlarmCard(alarm: AlarmEntity) {
         Card(
-            colors = CardDefaults.cardColors(Color.White),
-            modifier = Modifier.clickable { openTimeEditor(alarm) }
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("%02d:%02d".format(alarm.hour, alarm.minute), fontSize = 38.sp)
-                    Spacer(Modifier.weight(1f))
-                    Switch(alarm.enabled, onCheckedChange = { setEnabled(alarm, it) })
-                    IconButton(onClick = { delete(alarm) }) {
-                        Icon(Icons.Default.Delete, "删除")
-                    }
-                }
-                Text(
-                    if (alarm.mode == AlarmMode.CONTINUOUS) "持续响铃，刷牙后停止"
-                    else "舍友模式：本次可安静 1 分钟，仅一次",
-                    color = Color(0xFF58635F)
-                )
-                Text(
-                    "点击卡片可修改时间",
-                    color = Color(0xFF7B8581),
-                    fontSize = 12.sp
-                )
-                if (alarm.enabled && alarm.nextTriggerAt > 0) {
                     Text(
-                        "下次：${formatTriggerTime(alarm.nextTriggerAt)}" +
-                            if (exactAlarmAllowed) "（系统精确闹钟）" else "（可能延迟）",
-                        color = Color(0xFF66716D),
-                        fontSize = 12.sp
+                        "%02d:%02d".format(alarm.hour, alarm.minute),
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-1.5).sp,
+                        color = if (alarm.enabled) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f).clickable { openTimeEditor(alarm) }
+                    )
+                    Switch(
+                        checked = alarm.enabled,
+                        onCheckedChange = { setEnabled(alarm, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                            uncheckedBorderColor = Color.Transparent
+                        )
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("模式", modifier = Modifier.padding(end = 12.dp))
-                    FilterChip(
-                        selected = alarm.mode == AlarmMode.CONTINUOUS,
-                        onClick = { updateMode(alarm, AlarmMode.CONTINUOUS) },
-                        label = { Text("持续") }
+                    Text(
+                        "${formatWeekdays(alarm.weekdays)} · ${modeLabel(alarm.mode)}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.width(8.dp))
-                    FilterChip(
-                        selected = alarm.mode == AlarmMode.ROOMMATE,
-                        onClick = { updateMode(alarm, AlarmMode.ROOMMATE) },
-                        label = { Text("舍友") }
-                    )
-                }
-                Text("重复", modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    listOf("一", "二", "三", "四", "五", "六", "日")
-                        .forEachIndexed { index, name ->
-                            val bit = 1 shl index
-                            DayToggle(
-                                modifier = Modifier.weight(1f),
-                                label = name,
-                                selected = alarm.weekdays and bit != 0,
-                                onClick = {
-                                    val changed = alarm.weekdays xor bit
-                                    if (changed != 0) updateWeekdays(alarm, changed)
-                                }
-                            )
-                        }
+                    TextButton(
+                        onClick = { openTimeEditor(alarm) },
+                        contentPadding = PaddingValues(start = 10.dp, end = 0.dp),
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ) {
+                        Text("编辑", fontSize = 12.sp)
+                        Icon(Icons.Default.ChevronRight, null, Modifier.size(15.dp))
+                    }
                 }
             }
         }
@@ -379,12 +491,12 @@ class MainActivity : ComponentActivity() {
         showTimeEditor = true
     }
 
-    private fun saveTime(existing: AlarmEntity?, hour: Int, minute: Int) {
+    private fun saveTime(existing: AlarmEntity?, hour: Int, minute: Int, mode: AlarmMode, weekdays: Int) {
         lifecycleScope.launch {
             val dao = (application as BrushAlarmApp).database.alarms()
             existing?.let { AlarmScheduler.cancel(this@MainActivity, it.id) }
-            val draft = existing?.copy(hour = hour, minute = minute)
-                ?: AlarmEntity(hour = hour, minute = minute)
+            val draft = existing?.copy(hour = hour, minute = minute, mode = mode, weekdays = weekdays)
+                ?: AlarmEntity(hour = hour, minute = minute, mode = mode, weekdays = weekdays)
             val id = withContext(Dispatchers.IO) { dao.upsert(draft) }
             val saved = draft.copy(id = id)
             if (saved.enabled) scheduleAndPersist(saved)
@@ -407,27 +519,6 @@ class MainActivity : ComponentActivity() {
                     (application as BrushAlarmApp).database.alarms()
                         .updateNextTrigger(alarm.id, 0)
                 }
-            }
-        }
-    }
-
-    private fun updateMode(alarm: AlarmEntity, mode: AlarmMode) {
-        saveAndReschedule(alarm.copy(mode = mode))
-    }
-
-    private fun updateWeekdays(alarm: AlarmEntity, weekdays: Int) {
-        saveAndReschedule(alarm.copy(weekdays = weekdays))
-    }
-
-    private fun saveAndReschedule(alarm: AlarmEntity) {
-        lifecycleScope.launch {
-            AlarmScheduler.cancel(this@MainActivity, alarm.id)
-            withContext(Dispatchers.IO) {
-                (application as BrushAlarmApp).database.alarms().upsert(alarm)
-            }
-            if (alarm.enabled) {
-                scheduleAndPersist(alarm)
-                requestExactAlarmIfNeeded()
             }
         }
     }
@@ -505,9 +596,25 @@ class MainActivity : ComponentActivity() {
         showPermissionGuide = false
     }
 
-    private fun formatTriggerTime(epochMillis: Long): String {
-        return DateTimeFormatter.ofPattern("M月d日 E HH:mm")
-            .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+    private fun formatNextDay(epochMillis: Long): String {
+        val day = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+        val today = java.time.LocalDate.now()
+        return when (day) {
+            today -> "今天"
+            today.plusDays(1) -> "明天"
+            else -> "周${listOf("一", "二", "三", "四", "五", "六", "日")[day.dayOfWeek.value - 1]}"
+        }
+    }
+
+    private fun modeLabel(mode: AlarmMode) = if (mode == AlarmMode.CONTINUOUS) "持续响铃" else "舍友模式"
+
+    private fun formatWeekdays(weekdays: Int): String = when (weekdays) {
+        0b1111111 -> "每天"
+        0b0011111 -> "周一至周五"
+        0b1100000 -> "周六、周日"
+        else -> listOf("一", "二", "三", "四", "五", "六", "日")
+            .filterIndexed { index, _ -> weekdays and (1 shl index) != 0 }
+            .joinToString("、") { "周$it" }
     }
 
     companion object {
@@ -520,9 +627,18 @@ class MainActivity : ComponentActivity() {
 private fun BrushAlarmTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = lightColorScheme(
-            primary = Color(0xFF425F57),
-            secondary = Color(0xFF749F82),
-            background = Color(0xFFF4F0E6)
+            primary = Color(0xFF27785C),
+            onPrimary = Color.White,
+            primaryContainer = Color(0xFFE3EEE7),
+            onPrimaryContainer = Color(0xFF182C25),
+            secondary = Color(0xFF63766D),
+            background = Color(0xFFF5F7F5),
+            onBackground = Color(0xFF182C25),
+            surface = Color.White,
+            onSurface = Color(0xFF182C25),
+            surfaceVariant = Color(0xFFE3EEE7),
+            onSurfaceVariant = Color(0xFF63766D),
+            outlineVariant = Color(0xFFE2E9E4)
         ),
         content = content
     )
@@ -537,7 +653,7 @@ private fun DayToggle(
 ) {
     Box(
         modifier
-            .height(40.dp)
+            .height(48.dp)
             .toggleable(value = selected, onValueChange = { onClick() }),
         contentAlignment = Alignment.Center
     ) {
@@ -557,75 +673,115 @@ private fun DayToggle(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WheelTimePickerDialog(
     initialHour: Int,
     initialMinute: Int,
+    initialMode: AlarmMode,
+    initialWeekdays: Int,
     onDismiss: () -> Unit,
-    onConfirm: (Int, Int) -> Unit
+    onDelete: (() -> Unit)?,
+    onConfirm: (Int, Int, AlarmMode, Int) -> Unit
 ) {
     var hour by remember(initialHour) { mutableIntStateOf(initialHour) }
     var minute by remember(initialMinute) { mutableIntStateOf(initialMinute) }
-    AlertDialog(
+    var mode by remember(initialMode) { mutableStateOf(initialMode) }
+    var weekdays by remember(initialWeekdays) { mutableIntStateOf(initialWeekdays) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("设置时间", fontWeight = FontWeight.SemiBold) },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp).padding(bottom = 18.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "上下滑动选择时间",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    if (onDelete == null) "添加闹钟" else "编辑闹钟",
+                    fontSize = 23.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)
                 )
-                Box(
-                    Modifier.fillMaxWidth().height(216.dp),
-                    contentAlignment = Alignment.Center
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "取消编辑") }
+            }
+            Text("上下滑动选择时间", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(Modifier.fillMaxWidth().height(216.dp), contentAlignment = Alignment.Center) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(54.dp)
+                ) {}
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = .10f),
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.fillMaxWidth().height(54.dp)
-                    ) {}
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        TimeWheel(
-                            count = 24,
-                            initial = initialHour,
-                            suffix = "时",
-                            onValueChange = { hour = it }
-                        )
-                        Text(
-                            ":",
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 2.dp)
-                        )
-                        TimeWheel(
-                            count = 60,
-                            initial = initialMinute,
-                            suffix = "分",
-                            onValueChange = { minute = it }
-                        )
-                    }
+                    TimeWheel(count = 24, initial = initialHour, suffix = "时", onValueChange = { hour = it })
+                    Text(":", fontSize = 34.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 2.dp))
+                    TimeWheel(count = 60, initial = initialMinute, suffix = "分", onValueChange = { minute = it })
                 }
-                Text(
-                    "%02d:%02d".format(hour, minute),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 8.dp)
+            }
+            Text("提醒模式", fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FilterChip(
+                    selected = mode == AlarmMode.CONTINUOUS,
+                    onClick = { mode = AlarmMode.CONTINUOUS },
+                    label = { Text("持续响铃") }
+                )
+                FilterChip(
+                    selected = mode == AlarmMode.ROOMMATE,
+                    onClick = { mode = AlarmMode.ROOMMATE },
+                    label = { Text("舍友模式") }
                 )
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(hour, minute) }) { Text("保存") }
+            Text(
+                if (mode == AlarmMode.CONTINUOUS) "完成刷牙验证后，闹钟才会停止"
+                else "本次可安静 1 分钟，仅一次；之后继续提醒",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Text("重复日期", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp)) {
+                listOf("一", "二", "三", "四", "五", "六", "日").forEachIndexed { index, name ->
+                    val bit = 1 shl index
+                    DayToggle(
+                        label = name, selected = weekdays and bit != 0,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val changed = weekdays xor bit
+                            if (changed != 0) weekdays = changed
+                        }
+                    )
+                }
+            }
+            Button(
+                onClick = { onConfirm(hour, minute, mode, weekdays) },
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)
+            ) { Text("保存闹钟", fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
+            if (onDelete != null) {
+                TextButton(
+                    onClick = { confirmDelete = true },
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Icon(Icons.Default.Delete, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("删除闹钟") }
+            }
         }
-    )
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("删除这个闹钟？") },
+            text = { Text("删除后，这个时间将不再提醒。") },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDelete?.invoke() }) { Text("删除") }
+            }
+        )
+    }
 }
 
 @Composable
