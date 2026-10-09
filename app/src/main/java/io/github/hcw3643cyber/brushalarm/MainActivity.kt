@@ -46,6 +46,7 @@ import io.github.hcw3643cyber.brushalarm.alarm.AlarmScheduler
 import io.github.hcw3643cyber.brushalarm.alarm.AlarmReceiver
 import io.github.hcw3643cyber.brushalarm.alarm.AlarmService
 import io.github.hcw3643cyber.brushalarm.alarm.AlarmDiagnosticLog
+import io.github.hcw3643cyber.brushalarm.alarm.AlarmSessionCoordinator
 import io.github.hcw3643cyber.brushalarm.data.AlarmEntity
 import io.github.hcw3643cyber.brushalarm.data.AlarmMode
 import io.github.hcw3643cyber.brushalarm.ui.VerificationActivity
@@ -99,29 +100,34 @@ class MainActivity : ComponentActivity() {
                 "battery_unrestricted=$batteryUnrestricted " +
                 "full_screen=$fullScreenAlarmAllowed"
         )
-        val activeAlarmId = AlarmService.activeAlarmId(this)
-        if (activeAlarmId >= 0) {
-            AlarmDiagnosticLog.record(
-                this,
-                event = "main_forwarding_to_verification",
-                alarmId = activeAlarmId
-            )
-            startActivity(VerificationActivity.intent(this, activeAlarmId))
-            // The verification screen becomes the task entry while ringing.
-            // Finishing Main prevents onResume/startActivity ping-pong.
-            finish()
-            return
-        }
         exactAlarmAllowed = Build.VERSION.SDK_INT < 31 ||
             getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
         // Re-register on every foreground entry. This restores alarms after an
         // OEM process cleaner once the user opens the app again, and also keeps
         // best-effort alarms registered when exact access has not been granted.
         lifecycleScope.launch {
+            try {
+                val current = AlarmSessionCoordinator.reconcile(this@MainActivity, forceSchedule = true).current
+                if (current != null) {
+                    AlarmSessionCoordinator.requestService(this@MainActivity)
+                    startActivity(VerificationActivity.intent(this@MainActivity, current.alarmId, current.token))
+                    finish()
+                    return@launch
+                }
+            } catch (error: Exception) {
+                AlarmSessionCoordinator.failure(this@MainActivity, "app_restore_failed", error)
+            }
             val enabled = withContext(Dispatchers.IO) {
                 (application as BrushAlarmApp).database.alarms().enabled()
             }
-            enabled.forEach { scheduleAndPersist(it) }
+            enabled.forEach { alarm ->
+                runCatching {
+                    val scheduled = withContext(Dispatchers.IO) { AlarmScheduler.restore(this@MainActivity, alarm) }
+                    withContext(Dispatchers.IO) {
+                        (application as BrushAlarmApp).database.alarms().updateNextTrigger(alarm.id, scheduled.triggerAt)
+                    }
+                }.onFailure { AlarmSessionCoordinator.failure(this@MainActivity, "main_normal_restore_failed", it) }
+            }
         }
     }
 
@@ -315,7 +321,7 @@ class MainActivity : ComponentActivity() {
                 }
                 Text(
                     if (alarm.mode == AlarmMode.CONTINUOUS) "持续响铃，刷牙后停止"
-                    else "舍友模式：可静音，每分钟复响",
+                    else "舍友模式：本次可安静 1 分钟，仅一次",
                     color = Color(0xFF58635F)
                 )
                 Text(
@@ -427,7 +433,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun scheduleAndPersist(alarm: AlarmEntity) {
-        val scheduled = AlarmScheduler.schedule(this, alarm)
+        val scheduled = withContext(Dispatchers.IO) { AlarmScheduler.schedule(this@MainActivity, alarm) }
         withContext(Dispatchers.IO) {
             (application as BrushAlarmApp).database.alarms()
                 .updateNextTrigger(alarm.id, scheduled.triggerAt)

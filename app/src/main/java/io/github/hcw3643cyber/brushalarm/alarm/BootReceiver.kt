@@ -15,10 +15,8 @@ import kotlinx.coroutines.launch
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in SUPPORTED_ACTIONS) return
-        if (intent.action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
-            AlarmService.clearActiveAlarmState(context)
-        }
         val unlocked = context.getSystemService(UserManager::class.java).isUserUnlocked
+        val calendarChanged = intent.action == Intent.ACTION_TIME_CHANGED || intent.action == Intent.ACTION_TIMEZONE_CHANGED
         AlarmDiagnosticLog.record(
             context,
             event = "reschedule_broadcast",
@@ -27,19 +25,32 @@ class BootReceiver : BroadcastReceiver() {
         val result = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // Boot broadcasts only re-register real reminders; never launch mediaPlayback FGS here.
+                AlarmSessionCoordinator.reconcile(context, forceSchedule = true)
                 if (!unlocked) {
                     DirectBootAlarmStore.enabled(context).forEach {
-                        AlarmScheduler.schedule(context, it)
+                        runCatching { AlarmScheduler.restore(context, it, recomputeFuture = calendarChanged) }
+                            .onFailure { AlarmSessionCoordinator.failure(context, "boot_normal_schedule_failed", it) }
                     }
                     return@launch
                 }
                 val dao = (context.applicationContext as BrushAlarmApp).database.alarms()
                 val enabled = dao.enabled()
-                DirectBootAlarmStore.replaceAll(context, enabled)
-                enabled.forEach {
-                    val result = AlarmScheduler.schedule(context, it)
-                    dao.updateNextTrigger(it.id, result.triggerAt)
+                // Room owns editable configuration. DP owns the latest registration occurrence.
+                val merged = enabled.map { alarm ->
+                    DirectBootAlarmStore.get(context, alarm.id)?.takeIf {
+                        AlarmScheduler.sameConfiguration(it, alarm)
+                    } ?: alarm.copy(nextTriggerAt = 0)
                 }
+                DirectBootAlarmStore.replaceAll(context, merged)
+                enabled.forEach {
+                    runCatching {
+                        val result = AlarmScheduler.restore(context, it, recomputeFuture = calendarChanged)
+                        dao.updateNextTrigger(it.id, result.triggerAt)
+                    }.onFailure { AlarmSessionCoordinator.failure(context, "boot_normal_schedule_failed", it) }
+                }
+            } catch (error: Exception) {
+                AlarmSessionCoordinator.failure(context, "reschedule_failed", error)
             } finally { result.finish() }
         }
     }

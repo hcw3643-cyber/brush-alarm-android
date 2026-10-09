@@ -8,7 +8,8 @@ English | [简体中文](../zh-CN/ARCHITECTURE.zh-CN.md)
 Room alarm record
   └─ AlarmScheduler / AlarmManager exact alarm
        ├─ AlarmReceiver
-       ├─ Foreground ringing service + audio + WakeLock
+       ├─ Device-protected session queue + session recovery/quiet-end alarms
+       ├─ Foreground reminder service + looping audio/vibration + bounded WakeLock handoff
        └─ Full-screen notification / VerificationActivity
             └─ CameraX front camera
                  └─ BrushMotionAnalyzer
@@ -16,16 +17,27 @@ Room alarm record
                       ├─ 16 RGB frames at 192×192 with normalization
                       ├─ On-device ONNX Runtime inference every 0.5 s
                       └─ BrushDecisionFilter
-                           └─ Stop service and schedule next alarm after success
+                           └─ Complete the bound session token; advance FIFO or stop outputs
 ```
 
 ## Alarm reliability
 
 Android `AlarmManager` schedules the alarm itself; no permanently running
-application process is required. After an alarm fires, a foreground service
-plays audio and holds a time-limited CPU wake lock. Boot, unlock, package
-upgrade, and Direct Boot receivers restore enabled alarms from the local
-database.
+application process is required. Receipt persists an immutable occurrence/session
+before handing off a bounded CPU wake lock to the foreground service. Looping
+audio or zero-volume vibration runs independently of Activity, camera, unlock,
+and screen state. Normal next occurrences are repaired separately from service
+startup; session recovery uses system-owned PendingIntents as a best effort.
+
+Room owns editable configuration; device-protected storage owns registration
+intents and the durable session FIFO, exact completed identities, revisions and
+quiet allowance. Quiet is accepted only after a separate real alarm-clock end
+reminder is registered. Its deadline uses elapsed time on the same boot. Reboot
+ends temporary quiet, retains unfinished tasks and used allowance, and registers
+a real reminder without starting a mediaPlayback service from the boot broadcast.
+Recovery preserves overdue unfulfilled normal occurrences; clock/timezone changes
+recompute future calendar occurrences. Only verification of the current token
+completes that session. These runtime changes still require build and device validation.
 
 Some vendors still require exact-alarm, autostart, background-launch,
 lock-screen-display, and background-power permissions. The first launch presents

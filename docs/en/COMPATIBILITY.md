@@ -7,6 +7,10 @@ English | [简体中文](../zh-CN/COMPATIBILITY.zh-CN.md)
 Full end-to-end testing has only been completed on the maintainer's vivo X300
 running Android 16 / OriginOS 6. Cross-vendor adaptation has not been completed.
 
+That evidence concerns earlier releases. The current persistent-session,
+one-time quiet, vibration and recovery implementation is not yet compiled or
+device-tested; the historical matrix below does not validate these changes.
+
 The minimum declared OS is Android 8.0 (API 26), with target SDK 35. Meeting the
 minimum only means that installation is allowed; it does not validate vendor
 background policy or full-screen notification behavior.
@@ -32,7 +36,7 @@ building an unlimited queue, so they may still run but take longer to verify.
 The 4 GB/64-bit ARM recommendation is conservative, not a measured hard limit
 across many phones.
 
-## Physical-device matrix
+## Historical physical-device matrix (earlier releases)
 
 | Scenario | vivo X300 / Android 16 / OriginOS 6 | Other devices |
 |---|---|---|
@@ -44,6 +48,13 @@ across many phones.
 | Alarm restoration after reboot | Implemented; broader validation needed | Not verified |
 | Automatic recovery after system Force stop | Android does not allow it | Android does not allow it |
 | Recognition across people, lighting, and toothbrushes | Insufficient samples | Not verified |
+
+Current changes require fresh checks with both nonzero and zero alarm volume:
+screen off/unlocked, screen off/locked, screen staying black with full-screen UI
+denied, long idle/Doze, absent process, and reboot before first unlock. Also check
+task dismissal, actual PID-changing process death, quiet at second 59, FIFO,
+clock/timezone changes and two recovery cycles after completion. None has been
+device-verified for this implementation. Force Stop remains a system boundary.
 
 ## Recommended report information
 
