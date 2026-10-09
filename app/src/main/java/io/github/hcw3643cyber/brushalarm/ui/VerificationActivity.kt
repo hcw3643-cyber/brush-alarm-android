@@ -1,19 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Leo Huang
 // SPDX-License-Identifier: GPL-3.0-only
-
 package io.github.hcw3643cyber.brushalarm.ui
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.app.ActivityOptions
-import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.UserManager
 import android.util.Size
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
@@ -39,133 +35,149 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import io.github.hcw3643cyber.brushalarm.BrushAlarmApp
-import io.github.hcw3643cyber.brushalarm.alarm.AlarmReceiver
-import io.github.hcw3643cyber.brushalarm.alarm.AlarmDiagnosticLog
-import io.github.hcw3643cyber.brushalarm.alarm.AlarmService
-import io.github.hcw3643cyber.brushalarm.alarm.DirectBootAlarmStore
-import io.github.hcw3643cyber.brushalarm.data.AlarmMode
+import io.github.hcw3643cyber.brushalarm.alarm.*
 import io.github.hcw3643cyber.brushalarm.verification.BrushMotionAnalyzer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterNotNull
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class VerificationActivity : ComponentActivity() {
     private var hasCamera by mutableStateOf(false)
     private var progress by mutableFloatStateOf(0f)
-    private var hint by mutableStateOf("正在准备摄像头…")
-    private var roommateMode by mutableStateOf(false)
+    private var hint by mutableStateOf("正在恢复起床任务…")
+    private var session by mutableStateOf<AlarmSession?>(null)
+    private var queueSize by mutableIntStateOf(0)
+    private var quietSeconds by mutableLongStateOf(0)
+    private var commandError by mutableStateOf<String?>(null)
+    private var cameraError by mutableStateOf(false)
+    private var cameraRevision by mutableIntStateOf(0)
+    private var quietSubmitting by mutableStateOf(false)
+    private var verificationSubmitting = false
+    private var verificationFinished = false
+    private var seenRevision = -1L
+    private var cameraGeneration = 0L
     private lateinit var cameraExecutor: ExecutorService
     private var cameraProvider: ProcessCameraProvider? = null
+    private var analysis: ImageAnalysis? = null
     private var analyzer: BrushMotionAnalyzer? = null
-    private var verificationFinished = false
-    private var lockTaskRequested = false
     private var groundTruthLabel by mutableStateOf("未标记")
     private var groundTruth: Boolean? = null
 
-    private val permission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) {
+    private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         hasCamera = it
         if (!it) hint = "需要摄像头权限才能完成刷牙验证"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AlarmDiagnosticLog.record(
-            this,
-            event = "verification_activity_created",
-            alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
-            details = "action=${intent.action}"
-        )
         cameraExecutor = Executors.newSingleThreadExecutor()
-        hasCamera = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
+        hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         if (!hasCamera) permission.launch(Manifest.permission.CAMERA)
-        val id = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
         lifecycleScope.launch {
-            roommateMode = withContext(Dispatchers.IO) {
-                val alarm = if (
-                    getSystemService(UserManager::class.java).isUserUnlocked
-                ) {
-                    (application as BrushAlarmApp).database.alarms().get(id)
-                } else {
-                    DirectBootAlarmStore.get(this@VerificationActivity, id)
-                }
-                alarm?.mode == AlarmMode.ROOMMATE
+            AlarmSessionStore.states.filterNotNull().collect { bindState(it) }
+        }
+        lifecycleScope.launch {
+            while (isActive) {
+                quietSeconds = session?.quietRemaining(AlarmSessionStore.time(this@VerificationActivity))
+                    ?.let { (it + 999) / 1_000 } ?: 0
+                delay(250)
             }
         }
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF9BC5A5))) {
-                VerificationScreen()
-            }
+            MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF9BC5A5))) { VerificationScreen() }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        restore()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        AlarmDiagnosticLog.record(
-            this,
-            event = "verification_activity_new_intent",
-            alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
-            details = "action=${intent.action}"
-        )
+        restore()
     }
 
-    override fun onResume() {
-        super.onResume()
-        enterScreenPinningIfPossible()
+    private fun restore() {
+        lifecycleScope.launch {
+            try {
+                val state = AlarmSessionCoordinator.reconcile(this@VerificationActivity, forceSchedule = true)
+                bindState(state)
+                if (state.current != null) AlarmSessionCoordinator.requestService(this@VerificationActivity)
+            } catch (error: Exception) {
+                AlarmSessionCoordinator.failure(this@VerificationActivity, "verification_restore_failed", error)
+                commandError = "恢复任务失败，请重新打开应用重试"
+            }
+        }
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) enterScreenPinningIfPossible()
+    private fun bindState(state: SessionState) {
+        val published = AlarmSessionStore.states.value
+        if (state.revision < seenRevision || (published != null && state.revision < published.revision)) return
+        seenRevision = state.revision
+        val next = state.current
+        queueSize = state.queue.size
+        if (next?.token != session?.token) {
+            stopCamera()
+            progress = 0f
+            groundTruth = null
+            groundTruthLabel = "未标记"
+            cameraError = false
+            commandError = null
+            verificationSubmitting = false
+            hint = if (next == null) "本次起床任务已完成" else "请将牙刷和脸部放在画面中，开始刷牙"
+        }
+        session = next
+        if (next != null) verificationFinished = false
+        quietSeconds = next?.quietRemaining(AlarmSessionStore.time(this))?.let { (it + 999) / 1_000 } ?: 0
+        if (next == null && !verificationFinished) {
+            // No task is never interpreted as camera success. The durable core already removed it.
+            verificationFinished = true
+            window.decorView.postDelayed({
+                if (verificationFinished && session == null) finishAndRemoveTask()
+            }, 900)
+        }
     }
 
     @Composable
     private fun VerificationScreen() {
+        val current = session
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            if (hasCamera) CameraPreview(Modifier.fillMaxSize())
-            Column(
-                Modifier.fillMaxSize().padding(24.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
+            if (hasCamera && current != null) {
+                key(current.token, cameraRevision) { CameraPreview(Modifier.fillMaxSize(), current.token) }
+            }
+            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text("刷牙验证", color = Color.White, fontSize = 30.sp)
-                    Text(
-                        "视频仅在手机上实时分析，不会保存或上传",
-                        color = Color.White.copy(alpha = .75f)
-                    )
+                    Text("视频仅在手机上实时分析，不会保存或上传", color = Color.White.copy(alpha = .75f))
+                    if (queueSize > 1) Text("还有 ${queueSize - 1} 个起床任务等待验证", color = Color.White)
                 }
                 Card(colors = CardDefaults.cardColors(Color.Black.copy(alpha = .72f))) {
                     Column(Modifier.padding(20.dp)) {
                         Text(hint, color = Color.White, fontSize = 18.sp)
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)
-                        )
+                        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp))
                         Text("${(progress * 100).toInt()}%", color = Color.White)
-                        if (!hasCamera) {
-                            Button(
-                                onClick = { permission.launch(Manifest.permission.CAMERA) },
-                                modifier = Modifier.padding(top = 12.dp)
-                            ) { Text("允许摄像头") }
+                        commandError?.let { Text(it, color = Color(0xFFFFC6B8)) }
+                        if (!hasCamera) Button(onClick = { permission.launch(Manifest.permission.CAMERA) }) { Text("允许摄像头") }
+                        if (cameraError && current != null) OutlinedButton(onClick = {
+                            stopCamera(); cameraError = false; cameraRevision++; hint = "正在重新准备摄像头…"
+                        }) { Text("重试摄像头") }
+                        if (current?.roommate == true) {
+                            OutlinedButton(onClick = { quiet(current.token) },
+                                enabled = !current.quietUsed && !quietSubmitting,
+                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                                Text(when {
+                                    quietSeconds > 0 -> "已安静，${quietSeconds} 秒后恢复提醒"
+                                    current.quietUsed -> "本次静音额度已用尽"
+                                    quietSubmitting -> "正在安排复响…"
+                                    else -> "先安静 1 分钟（仅一次）"
+                                })
+                            }
                         }
-                        if (roommateMode) {
-                            OutlinedButton(
-                                onClick = { quiet() },
-                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-                            ) { Text("先安静 1 分钟") }
-                        }
-                        TestVerificationControls(
-                            label = groundTruthLabel,
-                            onBrushing = { markGroundTruth(true) },
-                            onStopped = { markGroundTruth(false) }
-                        )
+                        TestVerificationControls(label = groundTruthLabel,
+                            onBrushing = { markGroundTruth(true) }, onStopped = { markGroundTruth(false) })
                     }
                 }
             }
@@ -173,65 +185,115 @@ class VerificationActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun CameraPreview(modifier: Modifier) {
+    private fun CameraPreview(modifier: Modifier, token: String) {
         val context = LocalContext.current
-        AndroidView(
-            modifier = modifier,
-            factory = {
-                PreviewView(context).apply {
-                    scaleType = PreviewView.ScaleType.FILL_CENTER
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    startCamera(this)
-                }
+        AndroidView(modifier = modifier, factory = {
+            PreviewView(context).apply {
+                scaleType = PreviewView.ScaleType.FILL_CENTER
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                startCamera(this, token)
             }
-        )
+        })
     }
 
-    private fun startCamera(view: PreviewView) {
+    private fun startCamera(view: PreviewView, token: String) {
+        val generation = ++cameraGeneration
         val future = ProcessCameraProvider.getInstance(this)
-        future.addListener(cameraReady@{
-            if (isFinishing || isDestroyed) return@cameraReady
-            cameraProvider = future.get()
-            val preview = Preview.Builder().build().also {
-                it.surfaceProvider = view.surfaceProvider
-            }
-            val analysisBuilder = ImageAnalysis.Builder()
-                .setResolutionSelector(
-                    ResolutionSelector.Builder()
-                        .setResolutionStrategy(
-                            ResolutionStrategy(
-                                Size(640, 480),
-                                ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
-                            )
-                        )
-                        .build()
-                )
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            val analysis = analysisBuilder.build().also {
-                    analyzer = BrushMotionAnalyzer(
-                        context = this,
-                        onProgress = { value, text ->
-                            runOnUiThread { progress = value; hint = text }
-                        },
-                        onVerified = { runOnUiThread { verified() } }
-                    ).also { created ->
-                        groundTruth?.let(created::markGroundTruth)
+        future.addListener({
+            if (!cameraMatches(token, generation)) return@addListener
+            try {
+                val provider = future.get()
+                cameraProvider = provider
+                val preview = Preview.Builder().build().also { it.surfaceProvider = view.surfaceProvider }
+                val useCase = ImageAnalysis.Builder().setResolutionSelector(
+                    ResolutionSelector.Builder().setResolutionStrategy(
+                        ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)
+                    ).build()
+                ).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+                analysis = useCase
+                provider.unbindAll()
+                provider.bindToLifecycle(this, CameraSelector.DEFAULT_FRONT_CAMERA, preview, useCase)
+                // Large model reads/initialization do not block UI or the ringing service's main thread.
+                cameraExecutor.execute {
+                    try {
+                        val created = BrushMotionAnalyzer(this,
+                            onProgress = { value, text -> runOnUiThread {
+                                if (cameraMatches(token, generation)) { progress = value; hint = text }
+                            } },
+                            onVerified = { runOnUiThread {
+                                if (cameraMatches(token, generation)) verified(token)
+                            } })
+                        runOnUiThread {
+                            if (!cameraMatches(token, generation)) created.close() else {
+                                analyzer = created
+                                groundTruth?.let(created::markGroundTruth)
+                                useCase.setAnalyzer(cameraExecutor, created)
+                            }
+                        }
+                    } catch (error: Exception) {
+                        runOnUiThread { cameraFailure(token, generation, error) }
                     }
-                    it.setAnalyzer(cameraExecutor, analyzer!!)
                 }
-            cameraProvider?.unbindAll()
-            cameraProvider?.bindToLifecycle(
-                this, CameraSelector.DEFAULT_FRONT_CAMERA, preview, analysis
-            )
+            } catch (error: Exception) { cameraFailure(token, generation, error) }
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun quiet() {
-        startService(Intent(this, AlarmService::class.java).setAction(AlarmService.ACTION_QUIET))
-        hint = "已安静 1 分钟，请继续刷牙"
+    private fun cameraMatches(token: String, generation: Long): Boolean =
+        !isFinishing && !isDestroyed && !verificationFinished && session?.token == token && cameraGeneration == generation
+
+    private fun cameraFailure(token: String, generation: Long, error: Exception) {
+        if (!cameraMatches(token, generation)) return
+        AlarmSessionCoordinator.failure(this, "camera_prepare_failed", error)
+        cameraError = true
+        hint = "摄像头或识别模型暂时无法使用，请重试。起床提醒会继续。"
+    }
+
+    private fun stopCamera() {
+        cameraGeneration++
+        analysis?.clearAnalyzer()
+        analysis = null
+        cameraProvider?.unbindAll()
+        analyzer?.close()
+        analyzer = null
+    }
+
+    private fun quiet(token: String) {
+        if (quietSubmitting) return
+        quietSubmitting = true
+        lifecycleScope.launch {
+            try {
+                val state = AlarmSessionCoordinator.quiet(this@VerificationActivity, token)
+                bindState(state)
+                if (state.current != null) AlarmSessionCoordinator.requestService(this@VerificationActivity)
+            } catch (error: Exception) {
+                AlarmSessionCoordinator.failure(this@VerificationActivity, "quiet_request_failed", error)
+                commandError = "暂时无法安排 1 分钟后的提醒，请重试"
+            } finally { quietSubmitting = false }
+        }
+    }
+
+    private fun verified(token: String) {
+        if (verificationSubmitting || verificationFinished || session?.token != token) return
+        verificationSubmitting = true
+        lifecycleScope.launch {
+            try {
+                val state = AlarmSessionCoordinator.complete(this@VerificationActivity, token)
+                if (state.completed.none { it.token == token }) {
+                    verificationSubmitting = false
+                    bindState(state)
+                    return@launch
+                }
+                bindState(state)
+                if (state.current != null) {
+                    AlarmSessionCoordinator.requestService(this@VerificationActivity)
+                } else hint = "验证通过，早上好！"
+            } catch (error: Exception) {
+                AlarmSessionCoordinator.failure(this@VerificationActivity, "verification_commit_failed", error)
+                verificationSubmitting = false
+                commandError = "保存验证结果失败，请重试摄像头"
+                cameraError = true
+            }
+        }
     }
 
     private fun markGroundTruth(brushing: Boolean) {
@@ -240,102 +302,30 @@ class VerificationActivity : ComponentActivity() {
         groundTruthLabel = if (brushing) "正在刷牙" else "没有刷牙"
     }
 
-    private fun verified() {
-        if (verificationFinished) return
-        verificationFinished = true
-        exitScreenPinning()
-        startService(Intent(this, AlarmService::class.java).setAction(AlarmService.ACTION_VERIFIED))
-        hint = "验证通过，早上好！"
-        cameraProvider?.unbindAll()
-        window.decorView.postDelayed({ finishAndRemoveTask() }, 900)
-    }
-
-    private fun enterScreenPinningIfPossible() {
-        if (lockTaskRequested || verificationFinished) return
-        if (AlarmService.activeAlarmId(this) < 0) return
-        if (getSystemService(KeyguardManager::class.java).isKeyguardLocked) return
-        val activityManager = getSystemService(ActivityManager::class.java)
-        if (activityManager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE) {
-            lockTaskRequested = true
-            AlarmDiagnosticLog.record(
-                this,
-                event = "screen_pinning_already_active",
-                alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
-                details = "state=${activityManager.lockTaskModeState}"
-            )
-            return
-        }
-        lockTaskRequested = true
-        runCatching { startLockTask() }
-            .onSuccess {
-                AlarmDiagnosticLog.record(
-                    this,
-                    event = "screen_pinning_requested",
-                    alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
-                )
-            }
-            .onFailure {
-                AlarmDiagnosticLog.record(
-                    this,
-                    event = "screen_pinning_failed",
-                    alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
-                    details = it.javaClass.simpleName
-                )
-            }
-    }
-
-    private fun exitScreenPinning() {
-        val activityManager = getSystemService(ActivityManager::class.java)
-        if (activityManager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE) return
-        runCatching { stopLockTask() }
-    }
-
-    @SuppressLint("MissingSuperCall")
-    @Deprecated("Back is disabled while the alarm is active")
-    override fun onBackPressed() {
-        hint = "完成刷牙验证后才能关闭"
-    }
-
     override fun onDestroy() {
-        AlarmDiagnosticLog.record(
-            this,
-            event = "verification_activity_destroyed",
-            alarmId = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1),
-            details = "finishing=$isFinishing changing_config=$isChangingConfigurations"
-        )
-        cameraProvider?.unbindAll()
-        analyzer?.close()
-        analyzer = null
+        stopCamera()
         cameraExecutor.shutdown()
+        AlarmDiagnosticLog.record(this, "verification_activity_destroyed", details = "token=${session?.token}")
         super.onDestroy()
     }
 
     companion object {
         private const val ACTION_VERIFY = "brushalarm.VERIFY"
+        /** A cold sticky restart has no published snapshot yet; the UI binds the durable current task. */
+        fun restoreIntent(context: Context): Intent =
+            Intent(context, VerificationActivity::class.java).setAction(ACTION_VERIFY)
+                .setData(Uri.parse("brushalarm://verify/restore"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
-        fun intent(context: Context, alarmId: Long): Intent =
-            Intent(context, VerificationActivity::class.java)
-                .setAction(ACTION_VERIFY)
-                .addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-                )
-                .putExtra(AlarmReceiver.EXTRA_ID, alarmId)
+        fun intent(context: Context, alarmId: Long, token: String): Intent =
+            Intent(context, VerificationActivity::class.java).setAction(ACTION_VERIFY)
+                .setData(Uri.parse("brushalarm://verify/$token"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(AlarmReceiver.EXTRA_ID, alarmId).putExtra(AlarmSessionScheduler.EXTRA_TOKEN, token)
 
-        /**
-         * targetSdk 35+ no longer delegates background-activity-launch rights
-         * from a PendingIntent creator unless it explicitly opts in.
-         */
-        fun pendingIntentOptions(): Bundle? =
-            if (Build.VERSION.SDK_INT >= 35) {
-                ActivityOptions.makeBasic()
-                    .setPendingIntentCreatorBackgroundActivityStartMode(
-                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
-                    )
-                    .toBundle()
-            } else {
-                null
-            }
+        fun pendingIntentOptions(): Bundle? = if (Build.VERSION.SDK_INT >= 35) {
+            ActivityOptions.makeBasic().setPendingIntentCreatorBackgroundActivityStartMode(
+                ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle()
+        } else null
     }
 }

@@ -34,20 +34,26 @@ detects that the user is brushing their teeth.
 - Select each repeat day from Monday through Sunday.
 - Hour and minute wheels.
 - Continuous mode: the alarm keeps sounding until brushing verification passes.
-- Roommate mode: the alarm may be silenced temporarily, but rings again every
-  minute until verification passes.
+- Roommate mode: one 60-second quiet period per wake-up session, then continuous
+  reminders until verification passes. Restarting does not restore the allowance.
+- Looping vibration when alarm volume is zero; output follows alarm-volume changes.
 - Exact `AlarmManager` alarms, full-screen notifications, a foreground ringing
   service, and a CPU wake lock.
 - Alarm re-registration after screen-off operation, recent-task dismissal,
   device reboot, and Direct Boot.
 - On-device front-camera video inference with ONNX Runtime; frames are processed
   in memory.
-- The verification screen disables Back, hides the recent-task UI, and requests
-  Android screen pinning.
+- Persistent FIFO wake-up sessions; leaving verification does not complete a task.
+  Reminder recovery does not depend on screen pinning or the camera page.
 - A separate Debug test application retains numerical inference logs and manual
   labels without mixing them into the production build.
 
 ## Known limitations
+
+The current session/recovery changes have not yet been compiled or validated on
+a device. Earlier vivo X300 testing applies to previous releases; screen-off,
+locked, black-screen, Doze, cold-process and pre-unlock operation all require
+fresh checks of this implementation.
 
 - Android vendors may impose extra restrictions on autostart, background
   activity launches, lock-screen display, and battery usage. The first launch

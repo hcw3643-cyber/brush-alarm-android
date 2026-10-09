@@ -1,253 +1,234 @@
 // SPDX-FileCopyrightText: 2026 Leo Huang
 // SPDX-License-Identifier: GPL-3.0-only
-
 package io.github.hcw3643cyber.brushalarm.alarm
 
 import android.app.*
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.Ringtone
-import android.media.RingtoneManager
 import android.os.IBinder
-import android.os.Build
 import android.os.PowerManager
-import android.os.UserManager
-import android.provider.Settings
 import androidx.core.app.NotificationCompat
-import io.github.hcw3643cyber.brushalarm.BrushAlarmApp
-import io.github.hcw3643cyber.brushalarm.R
-import io.github.hcw3643cyber.brushalarm.data.AlarmMode
 import io.github.hcw3643cyber.brushalarm.ui.VerificationActivity
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterNotNull
 
 class AlarmService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var ringtone: Ringtone? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private lateinit var output: AlarmOutput
     private var wakeLock: PowerManager.WakeLock? = null
-    private var alarmId = -1L
-    private var mode = AlarmMode.CONTINUOUS
-    private var repeatJob: Job? = null
-    private var alarmLoaded = false
-    private var alarmLoading = false
+    private var wakeRenewAt = 0L
+    private var foreground = false
+    private var notificationRevision = -1L
+    private var latest: SessionState? = null
+    private var monitor: Job? = null
+    private var appliedRevision = -1L
 
     override fun onCreate() {
         super.onCreate()
-        createChannel()
+        output = AlarmOutput(this)
+        AlarmDiagnosticLog.record(this, "service_created", details = "pid=${android.os.Process.myPid()}")
+        val channel = NotificationChannel(CHANNEL_ID, "正在响铃", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "刷牙闹钟响铃通知"
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            setSound(null, null)
+            enableVibration(false)
+        }
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        scope.launch {
+            AlarmSessionStore.states.filterNotNull().collect { state ->
+                if (foreground) applyState(state)
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        AlarmDiagnosticLog.record(
-            this,
-            event = "service_start_command",
-            alarmId = intent?.getLongExtra(AlarmReceiver.EXTRA_ID, -1) ?: -1,
-            details = "action=${intent?.action}"
-        )
-        when (intent?.action) {
-            ACTION_VERIFIED -> finishAlarm()
-            ACTION_QUIET -> if (mode == AlarmMode.ROOMMATE) quietForOneMinute()
-            ACTION_START -> beginAlarm(intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1))
-            null -> {
-                val activeId = activeAlarmId(this)
-                if (activeId >= 0) beginAlarm(activeId) else stopSelf()
+        // Even a stale cold command must meet the foreground start deadline.
+        try {
+            // First notification must already carry FSI on API 26/27; an update may not launch it.
+            startForeground(NOTIFICATION_ID, notification(AlarmSessionStore.states.value ?: latest))
+            foreground = true
+            if (acquireOrRenewWakeLock(android.os.SystemClock.elapsedRealtime()))
+                AlarmHandoff.release(intent?.getStringExtra(AlarmHandoff.EXTRA_ID))
+            AlarmDiagnosticLog.record(this, "foreground_promoted", details = "wake_held=${wakeLock?.isHeld}")
+        } catch (error: Exception) {
+            AlarmSessionCoordinator.failure(this, "start_foreground_failed", error)
+            AlarmHandoff.release(intent?.getStringExtra(AlarmHandoff.EXTRA_ID))
+            output.stop()
+            releaseWakeLock()
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        // Foreground promotion precedes diagnostic file IO and async state work.
+        intent?.let { AlarmReceiver.recordDelivery(this, "service_delivered", it) }
+        AlarmDiagnosticLog.record(this, "service_start_command", details = "action=${intent?.action}")
+        scope.launch {
+            try {
+                val token = intent?.getStringExtra(AlarmSessionScheduler.EXTRA_TOKEN)
+                val state = when (intent?.action) {
+                    AlarmScheduler.ACTION_ALARM_CLOCK -> {
+                        val id = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
+                        val at = intent.getLongExtra(AlarmReceiver.EXTRA_TRIGGER_AT, -1)
+                        if (id >= 0 && at >= 0) AlarmSessionCoordinator.receive(this@AlarmService, id, at)
+                        else AlarmSessionCoordinator.reconcile(this@AlarmService)
+                    }
+                    AlarmSessionScheduler.ACTION_FAST_RECOVERY -> {
+                        token?.let { AlarmSessionScheduler.cancelFastRecovery(this@AlarmService, it) }
+                        AlarmSessionCoordinator.reconcile(this@AlarmService, forceSchedule = true)
+                    }
+                    AlarmSessionScheduler.ACTION_RECOVERY,
+                    AlarmSessionScheduler.ACTION_QUIET_END,
+                    AlarmSessionScheduler.ACTION_REBOOT_REMINDER ->
+                        AlarmSessionCoordinator.reconcile(this@AlarmService, forceSchedule = true)
+                    ACTION_QUIET -> if (token != null) AlarmSessionCoordinator.quiet(this@AlarmService, token)
+                        else AlarmSessionCoordinator.reconcile(this@AlarmService)
+                    ACTION_VERIFIED -> if (token != null) AlarmSessionCoordinator.complete(this@AlarmService, token)
+                        else AlarmSessionCoordinator.reconcile(this@AlarmService)
+                    else -> AlarmSessionCoordinator.reconcile(this@AlarmService)
+                }
+                applyState(state)
+                if (state.current != null && monitor?.isActive != true) startMonitor()
+                runCatching { AlarmSessionCoordinator.repairNormal(this@AlarmService) }
+                    .onFailure { AlarmSessionCoordinator.failure(this@AlarmService, "service_next_schedule_failed", it) }
+            } catch (error: Exception) {
+                AlarmSessionCoordinator.failure(this@AlarmService, "service_reconcile_failed", error)
+                if (intent?.action == AlarmScheduler.ACTION_ALARM_CLOCK) {
+                    val id = intent.getLongExtra(AlarmReceiver.EXTRA_ID, -1)
+                    val at = intent.getLongExtra(AlarmReceiver.EXTRA_TRIGGER_AT, -1)
+                    if (id >= 0 && at >= 0) runCatching { AlarmScheduler.retryOccurrence(this@AlarmService, id, at) }
+                        .onFailure { AlarmSessionCoordinator.failure(this@AlarmService, "service_occurrence_retry_failed", it) }
+                }
+                output.stop()
+                releaseWakeLock()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                foreground = false
+                stopSelf()
             }
         }
         return START_STICKY
     }
 
-    private fun beginAlarm(id: Long) {
-        if (id < 0) {
+    private fun startMonitor() {
+        monitor = scope.launch {
+            while (isActive) {
+                try {
+                    val state = AlarmSessionCoordinator.reconcile(this@AlarmService)
+                    applyState(state)
+                    val current = state.current ?: break
+                    AlarmSessionCoordinator.running(this@AlarmService, current.token)
+                    // Normal calendar/database work must never precede foreground/output handoff.
+                    AlarmSessionCoordinator.repairNormal(this@AlarmService)
+                } catch (error: Exception) {
+                    AlarmSessionCoordinator.failure(this@AlarmService, "active_reconcile_failed", error)
+                }
+                delay(500)
+            }
+        }
+    }
+
+    private fun applyState(state: SessionState) {
+        val published = AlarmSessionStore.states.value
+        if (state.revision < appliedRevision || (published != null && state.revision < published.revision)) return
+        appliedRevision = state.revision
+        latest = state
+        val current = state.current
+        if (current == null) {
+            output.stop()
+            releaseWakeLock()
+            monitor?.cancel()
+            monitor = null
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            foreground = false
             stopSelf()
             return
         }
-        if (alarmId == id && (alarmLoading || alarmLoaded)) {
-            if (alarmLoaded) ring()
-            return
+        val time = AlarmSessionStore.time(this)
+        output.update(current, time)
+        acquireOrRenewWakeLock(time.elapsed)
+        if (notificationRevision != state.revision) {
+            getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(state))
+            notificationRevision = state.revision
         }
-        alarmId = id
-        alarmLoading = true
-        acquireWakeLock()
-        statePreferences(this).edit()
-            .putLong(ACTIVE_ALARM_ID, id)
-            .putInt(ACTIVE_BOOT_COUNT, bootCount(this))
-            .apply()
-        // A cold process must enter the foreground immediately. Room is opened
-        // afterwards; waiting for it here can exceed Android's deadline.
-        startForeground(NOTIFICATION_ID, notification("起床刷牙"))
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        AlarmDiagnosticLog.record(
-            this,
-            event = "foreground_notification_started",
-            alarmId = id,
-            details = "channel_importance=" +
-                "${notificationManager.getNotificationChannel(CHANNEL_ID)?.importance} " +
-                "full_screen=${Build.VERSION.SDK_INT < 34 || notificationManager.canUseFullScreenIntent()} " +
-                "creator_bal_opt_in=${Build.VERSION.SDK_INT >= 35}"
-        )
-        start(id)
     }
 
-    private fun start(id: Long) {
-        scope.launch {
-            val userUnlocked = getSystemService(UserManager::class.java).isUserUnlocked
-            val alarm = withContext(Dispatchers.IO) {
-                if (userUnlocked) {
-                    (application as BrushAlarmApp).database.alarms().get(id)
-                } else {
-                    DirectBootAlarmStore.get(this@AlarmService, id)
-                }
-            } ?: run {
-                alarmLoading = false
-                clearActiveAlarm()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-                return@launch
+    private fun acquireOrRenewWakeLock(elapsed: Long): Boolean {
+        return runCatching {
+            if (wakeLock == null) wakeLock = getSystemService(PowerManager::class.java)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BrushAlarm:active_session")
+                .apply { setReferenceCounted(false) }
+            if (wakeLock?.isHeld != true || elapsed >= wakeRenewAt) {
+                wakeLock?.acquire(5 * 60_000L)
+                wakeRenewAt = elapsed + 4 * 60_000L
             }
-            mode = alarm.mode
-            alarmLoading = false
-            alarmLoaded = true
-            // Refresh the placeholder with the configured label and roommate action.
-            startForeground(NOTIFICATION_ID, notification(alarm.label))
-            ring()
-            AlarmDiagnosticLog.record(this@AlarmService, "ring_started", alarm.id)
-            val scheduled = AlarmScheduler.schedule(this@AlarmService, alarm)
-            if (userUnlocked) {
-                withContext(Dispatchers.IO) {
-                    (application as BrushAlarmApp).database.alarms()
-                        .updateNextTrigger(alarm.id, scheduled.triggerAt)
-                }
-            }
-        }
+            wakeLock?.isHeld == true
+        }.onFailure { AlarmSessionCoordinator.failure(this, "wake_lock_failed", it) }.getOrDefault(false)
     }
 
-    private fun ring() {
-        if (ringtone?.isPlaying == true) return
-        ringtone = RingtoneManager.getRingtone(
-            this, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        )?.apply {
-            audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-            if (android.os.Build.VERSION.SDK_INT >= 28) isLooping = true
-            play()
-        }
+    private fun releaseWakeLock() {
+        runCatching { wakeLock?.takeIf { it.isHeld }?.release() }
+            .onFailure { AlarmSessionCoordinator.failure(this, "wake_unlock_failed", it) }
+        wakeLock = null
+        wakeRenewAt = 0
     }
 
-    private fun acquireWakeLock() {
-        if (wakeLock?.isHeld == true) return
-        wakeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BrushAlarm:ringing")
-            .apply { acquire(30 * 60_000L) }
-    }
-
-    private fun quietForOneMinute() {
-        ringtone?.stop()
-        repeatJob?.cancel()
-        repeatJob = scope.launch {
-            delay(60_000)
-            ring()
-        }
-    }
-
-    private fun finishAlarm() {
-        clearActiveAlarm()
-        ringtone?.stop()
-        repeatJob?.cancel()
-        wakeLock?.takeIf { it.isHeld }?.release()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
-    private fun clearActiveAlarm() {
-        statePreferences(this)
-            .edit().remove(ACTIVE_ALARM_ID).apply()
-    }
-
-    private fun notification(label: String): Notification {
-        val verify = PendingIntent.getActivity(
-            this,
-            1,
-            VerificationActivity.intent(this, alarmId),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            VerificationActivity.pendingIntentOptions()
-        )
-        val quietIntent = PendingIntent.getService(
-            this, 2, Intent(this, AlarmService::class.java).setAction(ACTION_QUIET),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun notification(state: SessionState?): Notification {
+        val current = state?.current
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle(label)
-            .setContentText("完成刷牙验证后闹钟才会停止")
+            .setContentTitle(current?.label ?: "正在恢复起床提醒")
+            .setContentText(if (current != null && current.quietRemaining(AlarmSessionStore.time(this)) > 0)
+                "已使用本次静音，1 分钟结束后恢复提醒" else "完成刷牙验证后闹钟才会停止")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setOnlyAlertOnce(true)
-            .setOngoing(true)
-            .setFullScreenIntent(verify, true)
-            .addAction(0, "开始验证", verify)
-            .apply { if (mode == AlarmMode.ROOMMATE) addAction(0, "安静 1 分钟", quietIntent) }
-            .build()
+            .setOnlyAlertOnce(true).setOngoing(true)
+        val verifyIntent = current?.let { VerificationActivity.intent(this, it.alarmId, it.token) }
+            ?: VerificationActivity.restoreIntent(this)
+        val verify = PendingIntent.getActivity(this, 0, verifyIntent, PendingIntent.FLAG_IMMUTABLE,
+            VerificationActivity.pendingIntentOptions())
+        builder.setContentIntent(verify).setFullScreenIntent(verify, true).addAction(0, "开始验证", verify)
+        current?.let {
+            if (it.roommate && !it.quietUsed) builder.addAction(0, "安静 1 分钟（仅一次）",
+                AlarmSessionScheduler.pending(this, it.token, AlarmSessionScheduler.ACTION_QUIET))
+        }
+        return builder.build()
     }
 
-    private fun createChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID, "正在响铃", NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = "刷牙闹钟响铃通知"
-            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-        }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+    private fun armInterruptionRecovery(reason: String) {
+        val state = AlarmSessionStore.states.value ?: latest ?: return
+        runCatching { AlarmSessionScheduler.armInterruptionRecovery(this, state, reason) }
+            .onFailure { AlarmSessionCoordinator.failure(this, "interruption_recovery_failed", it) }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Register immediately, rather than launching a coroutine in a scope the OS may kill.
+        armInterruptionRecovery("task_removed")
+        AlarmDiagnosticLog.record(this, "service_task_removed", details =
+            "pid=${android.os.Process.myPid()} token=${(AlarmSessionStore.states.value ?: latest)?.current?.token}")
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
-        ringtone?.stop()
-        repeatJob?.cancel()
-        wakeLock?.takeIf { it.isHeld }?.release()
+        // Completed state has no current task, so intentional completion never rearms.
+        armInterruptionRecovery("service_destroyed")
+        output.stop()
+        releaseWakeLock()
         scope.cancel()
+        AlarmDiagnosticLog.record(this, "service_destroyed", details = "pid=${android.os.Process.myPid()} token=${(AlarmSessionStore.states.value ?: latest)?.current?.token}")
         super.onDestroy()
     }
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
         const val ACTION_START = "brushalarm.START"
+        const val ACTION_RECOVER = "brushalarm.RECOVER"
         const val ACTION_QUIET = "brushalarm.QUIET"
         const val ACTION_VERIFIED = "brushalarm.VERIFIED"
-        private const val CHANNEL_ID = "active_alarm"
+        private const val CHANNEL_ID = "active_alarm_sessions"
         private const val NOTIFICATION_ID = 4201
-        private const val STATE_FILE = "active_alarm_state"
-        private const val ACTIVE_ALARM_ID = "active_alarm_id"
-        private const val ACTIVE_BOOT_COUNT = "active_boot_count"
 
-        fun activeAlarmId(context: Context): Long {
-            val preferences = statePreferences(context)
-            return if (
-                preferences.getInt(ACTIVE_BOOT_COUNT, Int.MIN_VALUE) == bootCount(context)
-            ) {
-                preferences.getLong(ACTIVE_ALARM_ID, -1)
-            } else {
-                -1
-            }
-        }
-
-        fun clearActiveAlarmState(context: Context) {
-            statePreferences(context)
-                .edit()
-                .remove(ACTIVE_ALARM_ID)
-                .remove(ACTIVE_BOOT_COUNT)
-                .apply()
-        }
-
-        private fun statePreferences(context: Context) =
-            context.createDeviceProtectedStorageContext()
-                .getSharedPreferences(STATE_FILE, MODE_PRIVATE)
-
-        private fun bootCount(context: Context): Int =
-            Settings.Global.getInt(
-                context.contentResolver,
-                Settings.Global.BOOT_COUNT,
-                -1
-            )
+        fun activeAlarmId(context: Context): Long =
+            runCatching { AlarmSessionStore.read(context).current?.alarmId ?: -1 }
+                .onFailure { AlarmSessionCoordinator.failure(context, "active_read_failed", it) }.getOrDefault(-1)
     }
 }

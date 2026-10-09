@@ -7,6 +7,14 @@ English | [简体中文](../zh-CN/COMPATIBILITY.zh-CN.md)
 Full end-to-end testing has only been completed on the maintainer's vivo X300
 running Android 16 / OriginOS 6. Cross-vendor adaptation has not been completed.
 
+That complete evidence concerns earlier releases. The persistent-session implementation
+has now passed local builds and JVM unit tests. In one maintainer test on 2026-10-09,
+after enabling associated-start and other background settings, a zero-volume alarm
+reached the service about 35 ms after its deadline with the display off and requested
+vibration. This is evidence for one delivery, not complete validation of screen-off,
+Doze or recovery scenarios. The new rapid task-dismissal recovery still needs device
+testing; the historical matrix does not validate these changes.
+
 The minimum declared OS is Android 8.0 (API 26), with target SDK 35. Meeting the
 minimum only means that installation is allowed; it does not validate vendor
 background policy or full-screen notification behavior.
@@ -32,7 +40,7 @@ building an unlimited queue, so they may still run but take longer to verify.
 The 4 GB/64-bit ARM recommendation is conservative, not a measured hard limit
 across many phones.
 
-## Physical-device matrix
+## Historical physical-device matrix (earlier releases)
 
 | Scenario | vivo X300 / Android 16 / OriginOS 6 | Other devices |
 |---|---|---|
@@ -44,6 +52,13 @@ across many phones.
 | Alarm restoration after reboot | Implemented; broader validation needed | Not verified |
 | Automatic recovery after system Force stop | Android does not allow it | Android does not allow it |
 | Recognition across people, lighting, and toothbrushes | Insufficient samples | Not verified |
+
+Current changes require fresh checks with both nonzero and zero alarm volume:
+screen off/unlocked, screen off/locked, screen staying black with full-screen UI
+denied, long idle/Doze, absent process, and reboot before first unlock. Also check
+task dismissal, actual PID-changing process death, quiet at second 59, FIFO,
+clock/timezone changes and two recovery cycles after completion. Apart from the single zero-volume screen-off delivery above, these scenarios still
+lack complete device validation. Force Stop remains a system boundary.
 
 ## Recommended report information
 
@@ -73,9 +88,14 @@ exact-alarm, notification, camera, and battery-optimization settings.
 The maintainer's test phone requires the following for Brush Alarm:
 
 - Autostart
+- Associated start (the maintainer reports screen-off startup worked after enabling it)
 - Display on lock screen
 - Background pop-up
 - Background power management set to “Allow background power usage”
+
+Configure these separately for the test and production packages. Associated start
+is distinct from autostart; standard Android APIs do not expose the vendor's
+associated-start permission status, so it must be checked in system settings.
 
 The screenshots below only help locate settings on OriginOS 6. Names and
 locations may change after an update; other vendors use similar autostart,
